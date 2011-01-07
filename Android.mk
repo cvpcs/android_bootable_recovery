@@ -8,6 +8,12 @@ commands_recovery_local_path := $(LOCAL_PATH)
 
 LOCAL_SRC_FILES := \
 	recovery.c \
+	recovery_lib.c \
+	recovery_menu.c \
+	nandroid_menu.c \
+	install_menu.c \
+	mount_menu.c \
+	wipe_menu.c \
 	bootloader.c \
 	firmware.c \
 	install.c \
@@ -41,6 +47,14 @@ LOCAL_STATIC_LIBRARIES += libminzip libunz libmtdutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
 
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := format.c
+LOCAL_MODULE := format
+LOCAL_FORCE_STATIC_EXECUTABLE := true
+LOCAL_MODULE_TAGS := eng
+LOCAL_STATIC_LIBRARIES := libmtdutils libcutils libstdc++ libc
 include $(BUILD_EXECUTABLE)
 
 include $(commands_recovery_local_path)/minui/Android.mk

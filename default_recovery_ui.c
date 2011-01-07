@@ -19,18 +19,9 @@
 #include "recovery_ui.h"
 #include "common.h"
 
-char* MENU_HEADERS[] = { "Android system recovery utility",
-                         "",
-                         NULL };
-
-char* MENU_ITEMS[] = { "reboot system now",
-                       "apply sdcard:update.zip",
-                       "wipe data/factory reset",
-                       "wipe cache partition",
-                       NULL };
-
 int device_toggle_display(volatile char* key_pressed, int key_code) {
-    return key_code == KEY_HOME;
+    //return key_code == KEY_HOME;
+    return 0;
 }
 
 int device_reboot_now(volatile char* key_pressed, int key_code) {
@@ -49,7 +40,12 @@ int device_handle_key(int key_code, int visible) {
                 return HIGHLIGHT_UP;
 
             case KEY_ENTER:
+            case KEY_HP: // this is the camera key's first level of being pressed
+            case KEY_CENTER:
                 return SELECT_ITEM;
+
+            case KEY_END: // This is actually the power button!
+                return ITEM_BACK;
         }
     }
 

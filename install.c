@@ -340,6 +340,9 @@ install_package(const char *root_path)
     ui_print("Opening update package...\n");
     LOGI("Update file path: %s\n", path);
 
+    /**
+     * We don't bother with verification
+     *
     int numKeys;
     RSAPublicKey* loadedKeys = load_keys(PUBLIC_KEYS_FILE, &numKeys);
     if (loadedKeys == NULL) {
@@ -362,6 +365,8 @@ install_package(const char *root_path)
         LOGE("signature verification failed\n");
         return INSTALL_CORRUPT;
     }
+     * End verification comment
+     */
 
     /* Try to open the package.
      */

@@ -24,6 +24,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
 
 #include "common.h"
 #include "minui/minui.h"
@@ -36,7 +39,9 @@
 #define CHAR_HEIGHT 18
 
 #define PROGRESSBAR_INDETERMINATE_STATES 6
-#define PROGRESSBAR_INDETERMINATE_FPS 15
+#define PROGRESSBAR_INDETERMINATE_FPS 24
+
+#define TEXTCOLOR gr_color(255,255,255,255);
 
 enum { LEFT_SIDE, CENTER_TILE, RIGHT_SIDE, NUM_SIDES };
 
@@ -159,15 +164,19 @@ static void draw_progress_locked()
 }
 
 static void draw_text_line(int row, const char* t) {
-  if (t[0] != '\0') {
-    gr_text(0, (row+1)*CHAR_HEIGHT-1, t);
-  }
+    if (t[0] != '\0') {
+	gr_text(0, (row+1)*CHAR_HEIGHT-1, t);
+    }
 }
 
 // Redraw everything on the screen.  Does not flip pages.
 // Should only be called with gUpdateMutex locked.
 static void draw_screen_locked(void)
 {
+    int cRv = 54;
+    int cGv = 74;
+    int cBv = 255;
+
     draw_background_locked(gCurrentIcon);
     draw_progress_locked();
 
@@ -177,7 +186,7 @@ static void draw_screen_locked(void)
 
         int i = 0;
         if (show_menu) {
-            gr_color(64, 96, 255, 255);
+            gr_color(cRv,cGv,cBv,255);
             gr_fill(0, (menu_top+menu_sel) * CHAR_HEIGHT,
                     gr_fb_width(), (menu_top+menu_sel+1)*CHAR_HEIGHT+1);
 
@@ -185,7 +194,7 @@ static void draw_screen_locked(void)
                 if (i == menu_top + menu_sel) {
                     gr_color(255, 255, 255, 255);
                     draw_text_line(i, menu[i]);
-                    gr_color(64, 96, 255, 255);
+                    gr_color(cRv,cGv,cBv,255);
                 } else {
                     draw_text_line(i, menu[i]);
                 }
@@ -195,7 +204,7 @@ static void draw_screen_locked(void)
             ++i;
         }
 
-        gr_color(255, 255, 0, 255);
+        TEXTCOLOR
 
         for (; i < text_rows; ++i) {
             draw_text_line(i, text[(i+text_top) % text_rows]);
@@ -233,7 +242,7 @@ static void *progress_thread(void *cookie)
 
         // update the progress bar animation, if active
         // skip this if we have a text overlay (too expensive to update)
-        if (gProgressBarType == PROGRESSBAR_TYPE_INDETERMINATE && !show_text) {
+        if (gProgressBarType == PROGRESSBAR_TYPE_INDETERMINATE) {
             update_progress_locked();
         }
 
@@ -351,6 +360,12 @@ void ui_init(void)
     pthread_t t;
     pthread_create(&t, NULL, progress_thread, NULL);
     pthread_create(&t, NULL, input_thread, NULL);
+
+    pthread_mutex_lock(&gUpdateMutex);
+    show_text = !show_text;
+    update_screen_locked();
+    pthread_mutex_unlock(&gUpdateMutex);
+
 }
 
 char *ui_copy_image(int icon, int *width, int *height, int *bpp) {
@@ -458,7 +473,7 @@ void ui_print(const char *fmt, ...)
     pthread_mutex_unlock(&gUpdateMutex);
 }
 
-void ui_start_menu(char** headers, char** items) {
+void ui_start_menu(char** headers, char** items, int sel) {
     int i;
     pthread_mutex_lock(&gUpdateMutex);
     if (text_rows > 0 && text_cols > 0) {
@@ -475,7 +490,7 @@ void ui_start_menu(char** headers, char** items) {
         }
         menu_items = i - menu_top;
         show_menu = 1;
-        menu_sel = 0;
+        menu_sel = sel;
         update_screen_locked();
     }
     pthread_mutex_unlock(&gUpdateMutex);
@@ -487,8 +502,8 @@ int ui_menu_select(int sel) {
     if (show_menu > 0) {
         old_sel = menu_sel;
         menu_sel = sel;
-        if (menu_sel < 0) menu_sel = 0;
-        if (menu_sel >= menu_items) menu_sel = menu_items-1;
+        if (menu_sel < 0) menu_sel = menu_items-1;
+        if (menu_sel >= menu_items) menu_sel = 0;
         sel = menu_sel;
         if (menu_sel != old_sel) update_screen_locked();
     }
@@ -537,4 +552,398 @@ void ui_clear_key_queue() {
     pthread_mutex_lock(&key_queue_mutex);
     key_queue_len = 0;
     pthread_mutex_unlock(&key_queue_mutex);
+}
+
+void ui_char_shifted(char* c) {
+    switch(*c) {
+    case 'a':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='\t';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='A';
+	}
+	break;
+    case 'b':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='+';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='B';
+	}
+	break;
+    case 'c':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='_';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='C';
+	}
+	break;
+    case 'd':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='#';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='D';
+	}
+	break;
+    case 'e':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='3';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='E';
+	}
+	break;
+    case 'f':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='$';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='F';
+	}
+	break;
+    case 'g':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='%';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='G';
+	}
+	break;
+    case 'h':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='=';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='H';
+	}
+	break;
+    case 'i':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='8';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='I';
+	}
+	break;
+    case 'j':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='&';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='J';
+	}
+	break;
+    case 'k':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='*';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='K';
+	}
+	break;
+    case 'l':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='(';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='L';
+	}
+	break;
+    case 'm':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='\'';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='M';
+	}
+	break;
+    case 'n':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='"';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='N';
+	}
+	break;
+    case 'o':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='9';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='O';
+	}
+	break;
+    case 'p':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='0';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='P';
+	}
+	break;
+    case 'q':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='1';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='Q';
+	}
+	break;
+    case 'r':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='4';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='R';
+	}
+	break;
+    case 's':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='!';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='S';
+	}
+	break;
+    case 't':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='5';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='T';
+	}
+	break;
+    case 'u':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='7';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='U';
+	}
+	break;
+    case 'v':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='-';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='V';
+	}
+	break;
+    case 'w':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='2';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='W';
+	}
+	break;
+    case 'x':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='>';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='X';
+	}
+	break;
+    case 'y':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='6';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='Y';
+	}
+	break;
+    case 'z':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='<';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='Z';
+	}
+	break;
+    case '.':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c=':';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='.';
+	}
+	break;
+    case ',':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c=';';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c=',';
+	}
+	break;
+    case '@':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='~';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='@';
+	}
+	break;
+    case '/':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c='^';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='/';
+	}
+	break;
+    case '?':
+	if (ui_key_pressed(KEY_LEFTALT) || ui_key_pressed(KEY_RIGHTALT)) {
+	    *c=')';
+	}
+	else if (ui_key_pressed(KEY_LEFTSHIFT)||ui_key_pressed(KEY_RIGHTSHIFT)) {
+	    *c='?';
+	}
+	break;
+    }
+}
+
+char ui_get_char() {
+    char ret = NULL;
+    int key;
+    while (ret==NULL) {
+	key = ui_wait_key();
+	switch(key) {
+	case KEY_A:
+	    ret='a';
+	    break;
+	case KEY_B:
+	    ret='b';
+	    break;
+	case KEY_C:
+	    ret='c';
+	    break;
+	case KEY_D:
+	    ret='d';
+	    break;
+	case KEY_E:
+	    ret='e';
+	    break;
+	case KEY_F:
+	    ret='f';
+	    break;
+	case KEY_G:
+	    ret='g';
+	    break;
+	case KEY_H:
+	    ret='h';
+	    break;
+	case KEY_I:
+	    ret='i';
+	    break;
+	case KEY_J:
+	    ret='j';
+	    break;
+	case KEY_K:
+	    ret='k';
+	    break;
+	case KEY_L:
+	    ret='l';
+	    break;
+	case KEY_M:
+	    ret='m';
+	    break;
+	case KEY_N:
+	    ret='n';
+	    break;
+	case KEY_O:
+	    ret='o';
+	    break;
+	case KEY_P:
+	    ret='p';
+	    break;
+	case KEY_Q:
+	    ret='q';
+	    break;
+	case KEY_R:
+	    ret='r';
+	    break;
+	case KEY_S:
+	    ret='s';
+	    break;
+	case KEY_T:
+	    ret='t';
+	    break;
+	case KEY_U:
+	    ret='u';
+	    break;
+	case KEY_V:
+	    ret='v';
+	    break;
+	case KEY_W:
+	    ret='w';
+	    break;
+	case KEY_X:
+	    ret='x';
+	    break;
+	case KEY_Y:
+	    ret='y';
+	    break;
+	case KEY_Z:
+	    ret='z';
+	    break;
+	case KEY_COMMA:
+	    ret=',';
+	    break;
+	case KEY_DOT:
+	    ret='.';
+	    break;
+	case KEY_SLASH:
+	    ret='/';
+	    break;
+	case KEY_QUESTION:
+	    ret='?';
+	    break;
+	case KEY_EMAIL:
+	    ret='@';
+	    break;
+	case KEY_BACKSPACE:
+	    ret='\b';
+	    break;
+	case KEY_ENTER:
+	    ret='\n';
+	    break;
+	}
+    }
+    ui_char_shifted(&ret);
+    return ret;
+}
+
+void ui_read_line_n(char* buf, int n)
+{
+    int i;
+    char current = NULL;
+    char* tmp = malloc(2*sizeof(char));
+    tmp[1]=NULL;
+    for (i=0; i<n; i++) {
+	current=ui_get_char();
+	tmp[0]=current;
+	ui_print(tmp);
+	if(current=='\b' && i>0) {
+	    pthread_mutex_lock(&gUpdateMutex);
+	    i-=2;
+	    text_col-=2;
+	    text[text_row][text_col]='\0';
+	    update_screen_locked();
+	    pthread_mutex_unlock(&gUpdateMutex);
+	}
+	else if (current=='\n') {
+	    buf[i]=NULL;
+	    break;
+	}
+	else {
+	    buf[i]=current;
+	}
+    }
+    buf[n]=NULL;
+    return;
 }
