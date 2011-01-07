@@ -279,8 +279,9 @@ install_package(const char *root_path)
     ui_show_progress(
             VERIFICATION_PROGRESS_FRACTION,
             VERIFICATION_PROGRESS_TIME);
-
+     */
     int err;
+    /*
     err = verify_file(path, loadedKeys, numKeys);
     free(loadedKeys);
     LOGI("verify_file returned %d\n", err);
