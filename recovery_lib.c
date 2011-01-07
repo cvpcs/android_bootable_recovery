@@ -48,7 +48,6 @@ FILE* fopen_root_path(const char *root_path, const char *mode) {
     if (strchr("wa", mode[0])) dirCreateHierarchy(path, 0777, NULL, 1);
 
     FILE *fp = fopen(path, mode);
-    //    if (fp == NULL) LOGE("Can't open %s\n", path);
     return fp;
 }
 
@@ -57,7 +56,9 @@ void finish_recovery(const char *send_intent)
     // By this point, we're ready to return to the main system...
     if (send_intent != NULL) {
         FILE *fp = fopen_root_path(INTENT_FILE, "w");
-        if (fp != NULL) {
+        if (fp == NULL) {
+            LOGE("Can't open %s\n", INTENT_FILE);
+        } else {
             fputs(send_intent, fp);
             check_and_fclose(fp, INTENT_FILE);
         }
@@ -65,7 +66,9 @@ void finish_recovery(const char *send_intent)
 
     // Copy logs to cache so the system can find out what happened.
     FILE *log = fopen_root_path(LOG_FILE, "a");
-    if (log != NULL) {
+    if (log == NULL) {
+        LOGE("Can't open %s\n", LOG_FILE);
+    } else {
         FILE *tmplog = fopen(TEMPORARY_LOG_FILE, "r");
         if (tmplog == NULL) {
             LOGE("Can't open %s\n", TEMPORARY_LOG_FILE);
@@ -114,7 +117,7 @@ char** prepend_title(char** headers) {
     int c = 0;
     char ** p1;
     for (p1 = headers; *p1; ++p1, ++c);
-    
+
     char** ver_headers = calloc((c+1),sizeof(char*));
     ver_headers[0]=patch_line;
     ver_headers[c]=NULL;
@@ -153,7 +156,7 @@ void set_sdcard_update_bootloader_message()
 
 int erase_root(const char *root)
 {
-    ui_set_background(BACKGROUND_ICON_ERROR);
+    ui_set_background(BACKGROUND_ICON_INSTALLING);
     ui_show_indeterminate_progress();
     ui_print("Formatting %s...\n", root);
     return format_root_device(root);
@@ -169,10 +172,14 @@ int get_menu_selection(char** headers, char** items, int menu_only, int selected
 
     while (chosen_item < 0) {
         int key = ui_wait_key();
-	
-	/*	char* key_str = calloc(18,sizeof(char));
-		sprintf(key_str, "Key %d pressed.\n", key);
-		ui_print(key_str);*/
+
+	/**
+         * This can be used for debugging (displays key pressed)
+         *
+        char* key_str = calloc(18,sizeof(char));
+        sprintf(key_str, "Key %d pressed.\n", key);
+        ui_print(key_str);
+         */
 
 	if (key == KEY_BACKSPACE || key == KEY_END) {
 	    return(ITEM_BACK);
@@ -327,14 +334,14 @@ int runve(char* filename, char** argv, char** envp, int secs)
     char** items = NULL;
     char** headers = NULL;
     char** chks = NULL;
-    
+
     int i = 0; // iterator for menu items
     int j = 0; // iterator for menu headers
     int k = 0; // iterator for check menu items
     int l = 0;  // iterator for outputting flags from check menu
     int flags = INT_MAX;
     int choice;
-    
+
     while (fgets(cur_line,100,from)!=NULL) {
 	printf(cur_line);
 	tok=strtok(cur_line," \n");

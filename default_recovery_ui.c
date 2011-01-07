@@ -19,6 +19,10 @@
 #include "recovery_ui.h"
 #include "common.h"
 
+int device_recovery_start() {
+    return 0;
+}
+
 int device_toggle_display(volatile char* key_pressed, int key_code) {
     //return key_code == KEY_HOME;
     return 0;

@@ -32,7 +32,6 @@
 #include "bootloader.h"
 #include "common.h"
 #include "cutils/properties.h"
-#include "firmware.h"
 #include "install.h"
 #include "minui/minui.h"
 #include "minzip/DirUtil.h"
@@ -69,6 +68,7 @@ static const char *LOG_FILE = "CACHE:recovery/log";
  *   --update_package=root:path - verify install an OTA package file
  *   --wipe_data - erase user data (and cache), then reboot
  *   --wipe_cache - wipe cache (but not user data), then reboot
+ *   --set_encrypted_filesystem=on|off - enables / diasables encrypted fs
  *
  * After completing, we remove /cache/recovery/command and reboot.
  * Arguments may also be supplied in the bootloader control block (BCB).
@@ -113,6 +113,26 @@ static const char *LOG_FILE = "CACHE:recovery/log";
  *    8g. finish_recovery() erases BCB
  *        -- after this, rebooting will (try to) restart the main system --
  * 9. main() calls reboot() to boot main system
+ *
+ * ENCRYPTED FILE SYSTEMS ENABLE/DISABLE
+ * 1. user selects "enable encrypted file systems"
+ * 2. main system writes "--set_encrypted_filesystem=on|off" to
+ *    /cache/recovery/command
+ * 3. main system reboots into recovery
+ * 4. get_args() writes BCB with "boot-recovery" and
+ *    "--set_encrypted_filesystems=on|off"
+ *    -- after this, rebooting will restart the transition --
+ * 5. read_encrypted_fs_info() retrieves encrypted file systems settings from /data
+ *    Settings include: property to specify the Encrypted FS istatus and
+ *    FS encryption key if enabled (not yet implemented)
+ * 6. erase_root() reformats /data
+ * 7. erase_root() reformats /cache
+ * 8. restore_encrypted_fs_info() writes required encrypted file systems settings to /data
+ *    Settings include: property to specify the Encrypted FS status and
+ *    FS encryption key if enabled (not yet implemented)
+ * 9. finish_recovery() erases BCB
+ *    -- after this, rebooting will restart the main system --
+ * 10. main() calls reboot() to boot main system
  */
 
 static const int MAX_ARG_LENGTH = 4096;
@@ -191,8 +211,7 @@ print_property(const char *key, const char *name, void *cookie)
 }
 
 int
-main(int argc, char **argv)
-{
+main(int argc, char **argv) {
     time_t start = time(NULL);
 
     // If these fail, there's not really anywhere to complain...
@@ -211,8 +230,6 @@ main(int argc, char **argv)
 
     ui_print("Welcome to RZRecovery.  Use the volume up and   down buttons to move between menu options, the  camera button to select them, and the power     button to back out of a menu.\n\nThis version is made for RZ Baseline ROM.\n");
 
-	
-
     int previous_runs = 0;
     const char *send_intent = NULL;
     const char *update_package = NULL;
@@ -230,12 +247,14 @@ main(int argc, char **argv)
         case 'u': update_package = optarg; break;
         case 'w': wipe_data = wipe_cache = 1; break;
         case 'c': wipe_cache = 1; break;
-	case 'r': install_tgz = optarg; break;
+        case 'r': install_tgz = optarg; break;
         case '?':
             LOGE("Invalid command argument\n");
             continue;
         }
     }
+
+    device_recovery_start();
 
     fprintf(stderr, "Command:");
     for (arg = 0; arg < argc; arg++) {
@@ -274,9 +293,6 @@ main(int argc, char **argv)
 
     if (status != INSTALL_SUCCESS) ui_set_background(BACKGROUND_ICON_ERROR);
     if (status != INSTALL_SUCCESS || ui_text_visible()) prompt_and_wait();
-
-    // If there is a radio image pending, reboot now to install it.
-    maybe_install_firmware_update(send_intent);
 
     // Otherwise, get ready to boot the main system...
     finish_recovery(send_intent);

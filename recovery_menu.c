@@ -16,7 +16,7 @@
 #include "wipe_menu.h"
 
 
-void prompt_and_wait() 
+void prompt_and_wait()
 {
 
     char* menu_headers[] = { "Modded by raidzero",
@@ -27,7 +27,7 @@ void prompt_and_wait()
 
     char* items[] = { "Reboot into Android",
 		      "Reboot into Recovery",
-			  "Shutdown system",
+                      "Shutdown system",
 		      "Wipe partitions",
 		      "Mount options",
 		      "Backup/restore",
@@ -42,12 +42,12 @@ void prompt_and_wait()
 
 #define ITEM_REBOOT          0
 #define ITEM_RECOVERY	     1
-#define ITEM_POWEROFF		 2
+#define ITEM_POWEROFF        2
 #define ITEM_WIPE_PARTS      3
 #define ITEM_MOUNT_MENU      4
 #define ITEM_NANDROID_MENU   5
 #define ITEM_INSTALL         6
-#define ITEM_HELP		     7   
+#define ITEM_HELP            7
 
     int chosen_item = -1;
     for (;;) {
