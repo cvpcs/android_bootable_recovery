@@ -10,7 +10,6 @@
 #include "minui/minui.h"
 #include "recovery_ui.h"
 #include "roots.h"
-#include "firmware.h"
 #include "install.h"
 #include <string.h>
 
@@ -450,13 +449,8 @@ path = replace(filename, "/sdcard/", "SDCARD:");
 	    } else if (!ui_text_visible()) {
 		return 0;  // reboot if logs aren't visible
 	    } else {
-		if (firmware_update_pending()) {
-		    ui_print("\nReboot via menu to complete\n"
-			     "installation.\n");
-		} else {
-		    ui_print("\nInstall from sdcard complete.\n");
-			ui_print("\nThanks for using RZrecovery.\n");
-		}
+                ui_print("\nInstall from sdcard complete.\n");
+                ui_print("\nThanks for using RZrecovery.\n");
 	    }
 	return 0;
 }
