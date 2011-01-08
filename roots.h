@@ -20,6 +20,72 @@
 #include "minzip/Zip.h"
 #include "mtdutils/mtdutils.h"
 
+#ifndef BOARD_USES_MMCUTILS
+#define DEFAULT_FILESYSTEM "yaffs2"
+#else
+#define DEFAULT_FILESYSTEM "ext3"
+#endif
+
+#ifndef BOARD_SDCARD_DEVICE_PRIMARY
+#define BOARD_SDCARD_DEVICE_PRIMARY "/dev/block/mmcblk0p1"
+#endif
+
+#ifndef BOARD_SDCARD_DEVICE_SECONDARY
+#define BOARD_SDCARD_DEVICE_SECONDARY "/dev/block/mmcblk0"
+#endif
+
+#ifndef BOARD_SDCARD_DEVICE_INTERNAL
+#define BOARD_SDCARD_DEVICE_INTERNAL g_default_device
+#endif
+
+#ifndef BOARD_DATA_DEVICE
+#define BOARD_DATA_DEVICE g_default_device
+#endif
+
+#ifndef BOARD_DATA_FILESYSTEM
+#define BOARD_DATA_FILESYSTEM DEFAULT_FILESYSTEM
+#endif
+
+#ifndef BOARD_DATADATA_DEVICE
+#define BOARD_DATADATA_DEVICE g_default_device
+#endif
+
+#ifndef BOARD_DATADATA_FILESYSTEM
+#define BOARD_DATADATA_FILESYSTEM DEFAULT_FILESYSTEM
+#endif
+
+#ifndef BOARD_CACHE_DEVICE
+#define BOARD_CACHE_DEVICE g_default_device
+#endif
+
+#ifndef BOARD_CACHE_FILESYSTEM
+#define BOARD_CACHE_FILESYSTEM DEFAULT_FILESYSTEM
+#endif
+
+#ifndef BOARD_SYSTEM_DEVICE
+#define BOARD_SYSTEM_DEVICE g_default_device
+#endif
+
+#ifndef BOARD_SYSTEM_FILESYSTEM
+#define BOARD_SYSTEM_FILESYSTEM DEFAULT_FILESYSTEM
+#endif
+
+#ifndef BOARD_DATA_FILESYSTEM_OPTIONS
+#define BOARD_DATA_FILESYSTEM_OPTIONS NULL
+#endif
+
+#ifndef BOARD_CACHE_FILESYSTEM_OPTIONS
+#define BOARD_CACHE_FILESYSTEM_OPTIONS NULL
+#endif
+
+#ifndef BOARD_DATADATA_FILESYSTEM_OPTIONS
+#define BOARD_DATADATA_FILESYSTEM_OPTIONS NULL
+#endif
+
+#ifndef BOARD_SYSTEM_FILESYSTEM_OPTIONS
+#define BOARD_SYSTEM_FILESYSTEM_OPTIONS NULL
+#endif
+
 /* Any of the "root_path" arguments can be paths with relative
  * components, like "SYSTEM:a/b/c".
  */

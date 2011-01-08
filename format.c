@@ -44,16 +44,22 @@ static const char g_raw[] = "@\0g_raw";
 static const char g_package_file[] = "@\0g_package_file";
 
 static RootInfo g_roots[] = {
-    { "BOOT:", g_mtd_device, NULL, "boot", NULL, g_raw },
-    { "CACHE:", g_mtd_device, NULL, "cache", "/cache", "yaffs2" },
-    { "DATA:", g_mtd_device, NULL, "userdata", "/data", "yaffs2" },
-    { "MISC:", g_mtd_device, NULL, "misc", NULL, g_raw },
-    { "PACKAGE:", NULL, NULL, NULL, NULL, g_package_file },
-    { "RECOVERY:", g_mtd_device, NULL, "recovery", "/", g_raw },
-    { "SDCARD:", "/dev/block/mmcblk0p1", "/dev/block/mmcblk0", NULL, "/sdcard", "vfat" },
-    { "SYSTEM:", g_mtd_device, NULL, "system", "/system", "yaffs2" },
-    { "MBM:", g_mtd_device, NULL, "mbm", NULL, g_raw },
-    { "TMP:", NULL, NULL, NULL, "/tmp", NULL },
+    { "BOOT:", g_default_device, NULL, "boot", NULL, g_raw, NULL },
+    { "CACHE:", BOARD_CACHE_DEVICE, NULL, "cache", "/cache", BOARD_CACHE_FILESYSTEM, BOARD_CACHE_FILESYSTEM_OPTIONS },
+    { "DATA:", BOARD_DATA_DEVICE, NULL, "userdata", "/data", BOARD_DATA_FILESYSTEM, BOARD_DATA_FILESYSTEM_OPTIONS },
+#ifdef BOARD_HAS_DATADATA
+    { "DATADATA:", BOARD_DATADATA_DEVICE, NULL, "datadata", "/datadata", BOARD_DATADATA_FILESYSTEM, BOARD_DATADATA_FILESYSTEM_OPTIONS },
+#endif
+    { "MISC:", g_default_device, NULL, "misc", NULL, g_raw, NULL },
+    { "PACKAGE:", NULL, NULL, NULL, NULL, g_package_file, NULL },
+    { "RECOVERY:", g_default_device, NULL, "recovery", "/", g_raw, NULL },
+    { "SDCARD:", BOARD_SDCARD_DEVICE_PRIMARY, BOARD_SDCARD_DEVICE_SECONDARY, NULL, "/sdcard", "vfat", NULL },
+#ifdef BOARD_HAS_SDCARD_INTERNAL
+    { "SDINTERNAL:", BOARD_SDCARD_DEVICE_INTERNAL, NULL, NULL, "/emmc", "vfat", NULL },
+#endif
+    { "SYSTEM:", BOARD_SYSTEM_DEVICE, NULL, "system", "/system", BOARD_SYSTEM_FILESYSTEM, BOARD_SYSTEM_FILESYSTEM_OPTIONS },
+    { "MBM:", g_default_device, NULL, "mbm", NULL, g_raw, NULL },
+    { "TMP:", NULL, NULL, NULL, "/tmp", NULL, NULL },
 };
 #define NUM_ROOTS (sizeof(g_roots) / sizeof(g_roots[0]))
 
@@ -190,7 +196,23 @@ int main(int argc, char** argv)
 
     const char* root = argv[1];
     printf("Formatting %s\n",root);
-    
+
     int status = format_root_device(root);
-    return(0);
+
+    if (status != 0) {
+        printf("Can't format %s\n", root);
+        return status;
+    }
+
+#ifdef BOARD_HAS_DATADATA
+    if (0 == strcmp(root, "DATA:")) {
+        status = format_root_device("DATADATA:");
+        if (status != 0) {
+            printf("Can't format %s\n", root);
+            return status;
+        }
+    }
+#endif
+
+    return(status);
 }
