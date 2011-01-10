@@ -52,10 +52,11 @@ static const struct option OPTIONS[] = {
   { NULL, 0, NULL, 0 },
 };
 
+static const char *COMMAND_FILE = "CACHE:recovery/command";
+static const char *INTENT_FILE = "CACHE:recovery/intent";
+static const char *LOG_FILE = "CACHE:recovery/log";
 static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
 static const char *SAVE_LOG_FILE = "SDCARD:recovery.log";
-static const char *COMMAND_FILE = "CACHE:recovery/command";
-static const char *LOG_FILE = "CACHE:recovery/log";
 
 /*
  * The recovery tool communicates with the main system through /cache files.
@@ -138,6 +139,34 @@ static const char *LOG_FILE = "CACHE:recovery/log";
 static const int MAX_ARG_LENGTH = 4096;
 static const int MAX_ARGS = 100;
 
+// open a file given in root:path format, mounting partitions as necessary
+FILE* fopen_root_path(const char *root_path, const char *mode) {
+    if (ensure_root_path_mounted(root_path) != 0) {
+        LOGE("Can't mount %s\n", root_path);
+        return NULL;
+    }
+
+    char path[PATH_MAX] = "";
+    if (translate_root_path(root_path, path, sizeof(path)) == NULL) {
+        LOGE("Bad path %s\n", root_path);
+        return NULL;
+    }
+
+    // When writing, try to create the containing directory, if necessary.
+    // Use generous permissions, the system (init.rc) will reset them.
+    if (strchr("wa", mode[0])) dirCreateHierarchy(path, 0777, NULL, 1);
+
+    FILE *fp = fopen(path, mode);
+    return fp;
+}
+
+// close a file, log an error if the error indicator is set
+void check_and_fclose(FILE *fp, const char *name) {
+    fflush(fp);
+    if (ferror(fp)) LOGE("Error in %s\n(%s)\n", name, strerror(errno));
+    fclose(fp);
+}
+
 // command line args come from, in decreasing precedence:
 //   - the actual command line
 //   - the bootloader control block (one per line, after "recovery")
@@ -204,10 +233,221 @@ get_args(int *argc, char ***argv) {
     set_bootloader_message(&boot);
 }
 
+void set_sdcard_update_bootloader_message()
+{
+    struct bootloader_message boot;
+    memset(&boot, 0, sizeof(boot));
+    strlcpy(boot.command, "boot-recovery", sizeof(boot.command));
+    strlcpy(boot.recovery, "recovery\n", sizeof(boot.recovery));
+    set_bootloader_message(&boot);
+}
+
+// clear the recovery command and prepare to boot a (hopefully working) system,
+// copy our log file to cache as well (for the system to read), and
+// record any intent we were asked to communicate back to the system.
+// this function is idempotent: call it as many times as you like.
+void finish_recovery(const char *send_intent)
+{
+    // By this point, we're ready to return to the main system...
+    if (send_intent != NULL) {
+        FILE *fp = fopen_root_path(INTENT_FILE, "w");
+        if (fp == NULL) {
+            LOGE("Can't open %s\n", INTENT_FILE);
+        } else {
+            fputs(send_intent, fp);
+            check_and_fclose(fp, INTENT_FILE);
+        }
+    }
+
+    // Copy logs to cache so the system can find out what happened.
+    FILE *log = fopen_root_path(LOG_FILE, "a");
+    if (log == NULL) {
+        LOGE("Can't open %s\n", LOG_FILE);
+    } else {
+        FILE *tmplog = fopen(TEMPORARY_LOG_FILE, "r");
+        if (tmplog == NULL) {
+            LOGE("Can't open %s\n", TEMPORARY_LOG_FILE);
+        } else {
+            static long tmplog_offset = 0;
+            fseek(tmplog, tmplog_offset, SEEK_SET);  // Since last write
+            char buf[4096];
+            while (fgets(buf, sizeof(buf), tmplog)) fputs(buf, log);
+            tmplog_offset = ftell(tmplog);
+            check_and_fclose(tmplog, TEMPORARY_LOG_FILE);
+        }
+        check_and_fclose(log, LOG_FILE);
+    }
+
+    // Reset the bootloader message to revert to a normal main system boot.
+    struct bootloader_message boot;
+    memset(&boot, 0, sizeof(boot));
+    set_bootloader_message(&boot);
+
+    // Remove the command file, so recovery won't repeat indefinitely.
+    char path[PATH_MAX] = "";
+    if (ensure_root_path_mounted(COMMAND_FILE) != 0 ||
+        translate_root_path(COMMAND_FILE, path, sizeof(path)) == NULL ||
+        (unlink(path) && errno != ENOENT)) {
+        LOGW("Can't unlink %s\n", COMMAND_FILE);
+    }
+
+    sync();  // For good measure.
+}
+
+int erase_root(const char *root)
+{
+    ui_set_background(BACKGROUND_ICON_INSTALLING);
+    ui_show_indeterminate_progress();
+    ui_print("Formatting %s...\n", root);
+    return format_root_device(root);
+}
+
+char** prepend_title(char** headers) {
+
+    FILE* f = fopen("/recovery.version","r");
+    char* vers = calloc(8,sizeof(char));
+    fgets(vers, 8, f);
+
+    strtok(vers," ");  // truncate vers to before the first space
+
+    char* patch_line_ptr = calloc((strlen(headers[0])+11),sizeof(char));
+    char* patch_line = patch_line_ptr;
+    strcpy(patch_line,headers[0]);
+    strcat(patch_line," (");
+    strcat(patch_line,vers);
+    strcat(patch_line,")");
+
+    int c = 0;
+    char ** p1;
+    for (p1 = headers; *p1; ++p1, ++c);
+
+    char** ver_headers = calloc((c+1),sizeof(char*));
+    ver_headers[0]=patch_line;
+    ver_headers[c]=NULL;
+    char** v = ver_headers+1;
+    for (p1 = headers+1; *p1; ++p1, ++v) *v = *p1;
+
+    char* title[] = { "Android system recovery <"
+		      EXPAND(RECOVERY_API_VERSION) "e>",
+                      "",
+                      NULL };
+
+    // count the number of lines in our title, plus the
+    // caller-provided headers.
+    int count = 0;
+    char** p;
+    for (p = title; *p; ++p, ++count);
+    for (p = ver_headers; *p; ++p, ++count);
+
+    char** new_headers = calloc((count+1),sizeof(char*));
+    char** h = new_headers;
+    for (p = title; *p; ++p, ++h) *h = *p;
+    for (p = ver_headers; *p; ++p, ++h)	*h = *p;
+    *h = NULL;
+
+    return new_headers;
+}
+
+int get_menu_selection(char** headers, char** items, int menu_only, int selected) {
+    // throw away keys pressed previously, so user doesn't
+    // accidentally trigger menu items.
+    ui_clear_key_queue();
+
+    ui_start_menu(headers, items,selected);
+    int chosen_item = -1;
+
+    while (chosen_item < 0) {
+        int key = ui_wait_key();
+
+	/**
+         * This can be used for debugging (displays key pressed)
+         *
+        char* key_str = calloc(18,sizeof(char));
+        sprintf(key_str, "Key %d pressed.\n", key);
+        ui_print(key_str);
+         */
+
+	if (key == KEY_BACKSPACE || key == KEY_END) {
+	    return(ITEM_BACK);
+	}
+
+        int visible = ui_text_visible();
+
+        int action = device_handle_key(key, visible);
+
+        if (action < 0) {
+            switch (action) {
+	    case ITEM_BACK:
+		return(ITEM_BACK);
+		break;
+	    case HIGHLIGHT_UP:
+		--selected;
+		selected = ui_menu_select(selected);
+		break;
+	    case HIGHLIGHT_DOWN:
+		++selected;
+		selected = ui_menu_select(selected);
+		break;
+	    case SELECT_ITEM:
+		chosen_item = selected;
+		break;
+	    case NO_ACTION:
+		break;
+            }
+        } else if (!menu_only) {
+            chosen_item = action;
+        }
+    }
+
+    ui_end_menu();
+    return chosen_item;
+}
+
 static void
 print_property(const char *key, const char *name, void *cookie)
 {
     fprintf(stderr, "%s=%s\n", key, name);
+}
+
+void wipe_data(int confirm) {
+    if (confirm) {
+        static char** title_headers = NULL;
+
+        if (title_headers == NULL) {
+            char* headers[] = { "Confirm wipe of all user data?",
+                                "  THIS CAN NOT BE UNDONE.",
+                                "",
+                                NULL };
+            title_headers = prepend_title(headers);
+        }
+
+        char* items[] = { " No",
+                          " No",
+                          " No",
+                          " No",
+                          " No",
+                          " No",
+                          " No",
+                          " Yes -- delete all user data",   // [7]
+                          " No",
+                          " No",
+                          " No",
+                          NULL };
+
+        int chosen_item = get_menu_selection(title_headers, items, 1, 0);
+        if (chosen_item != 7) {
+            return;
+        }
+    }
+
+    ui_print("\n-- Wiping data...\n");
+    device_wipe_data();
+    erase_root("DATA:");
+#ifdef BOARD_HAS_DATADATA
+    erase_root("DATADATA:");
+#endif
+    erase_root("CACHE:");
+    ui_print("Data wipe complete.\n");
 }
 
 int
