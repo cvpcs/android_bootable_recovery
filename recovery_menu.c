@@ -105,15 +105,65 @@ void prompt_and_wait()
     }
 }
 
-recovery_menu* create_menu(char** headers, char** items, void* data,
-        menu_create_callback on_create, menu_select_callback on_select,
-        menu_destroy_callback on_destroy) {
+int count_menu_items(recovery_menu_item** list) {
+    // count how many items we have
+    int count = 0;
+    recovery_menu_item** p;
+    for (p = list; *p; ++p, ++count);
+    return count;
+}
+
+int count_menu_headers(char** list) {
+    // count how many items we have
+    int count = 0;
+    char** p;
+    for (p = list; *p; ++p, ++count);
+    return count;
+}
+
+recovery_menu_item* create_menu_item(int id, const char* title) {
+    recovery_menu_item* item = (recovery_menu_item*)malloc(sizeof(recovery_menu_item));
+    item->id = id;
+    item->title = strdup(title);
+    return item;
+}
+
+recovery_menu_item* duplicate_menu_item(recovery_menu_item* item) {
+    return create_menu_item(item->id, item->title);
+}
+
+void destroy_menu_item(recovery_menu_item* item) {
+    free(item->title);
+    free(item);
+}
+
+recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data,
+        menu_create_callback on_create, menu_create_items_callback on_create_items,
+        menu_select_callback on_select, menu_destroy_callback on_destroy) {
     recovery_menu* menu = (recovery_menu*)malloc(sizeof(recovery_menu));
 
-    menu->headers = headers;
-    menu->items = items;
+    // good old iterator
+    int i;
+
+    // copy the headers
+    int num_headers = count_menu_headers(headers);
+    menu->headers = (char**)calloc(num_headers + 1, sizeof(char*));
+    for(i = 0; i < num_headers; ++i) { menu->headers[i] = strdup(headers[i]); }
+    menu->headers[num_headers] = NULL;
+
+    // copy the items if we have any (might be NULL if useing on_create_items
+    if(items) {
+        int num_items = count_menu_items(&items);
+        menu->items = (recovery_menu_item**)calloc(num_items + 1, sizeof(recovery_menu_item*));
+        for(i = 0; i < num_items; ++i) { menu->items[i] = duplicate_menu_item(&items[i]); }
+        menu->items[num_items] = NULL;
+    } else {
+        menu->items = NULL;
+    }
+
     menu->data = data;
     menu->on_create = on_create;
+    menu->on_create_items = on_create_items;
     menu->on_select = on_select;
     menu->on_destroy = on_destroy;
 
@@ -121,6 +171,22 @@ recovery_menu* create_menu(char** headers, char** items, void* data,
 }
 
 void destroy_menu(recovery_menu* menu) {
+    // good old iterator
+    int i;
+
+    // destroy the headers
+    int num_headers = count_menu_headers(menu->headers);
+    for(i = 0; i < num_headers; ++i) { free(menu->headers[i]); }
+    free(menu->headers);
+
+    // destroy the items if they exists
+    if(menu->items) {
+        int num_items = count_menu_items(menu->items);
+        for(i = 0; i < num_items; ++i) { destroy_menu_item(menu->items[i]); }
+        free(menu->items);
+    }
+
+    // finally destroy the menu
     free(menu);
 }
 
@@ -134,13 +200,47 @@ void display_menu(recovery_menu* menu)
     }
 
     int chosen_item = -1;
-    while(chosen_item!=ITEM_BACK) {
-        chosen_item = get_menu_selection(menu->headers, menu->items, 1,
+    while(chosen_item != ITEM_BACK) {
+        recovery_menu_item** menu_items = menu->items;        
+
+        // if we are dynamically creating items, go for it here
+        if(menu->on_create_items) {
+            menu_items = (*(menu->on_create_items))(menu->data);
+        }
+
+        // if we weren't given any menu items (menu->items == NULL and menu->on_create_items == NULL),
+        // then we need to bail out
+        if(!menu_items) {
+            break;
+        }
+
+        // count how many items we have
+        int count = count_menu_items(menu_items);
+
+        // create a char array for use in get_menu_selection from our list of menu items
+        char** items = (char**)calloc(count + 1, sizeof(char*));
+        char** ip = items;
+        recovery_menu_item** p;
+        for (p = menu_items; *p; ++p, ++ip) *ip = (*p)->title;
+        *ip = NULL;
+
+        chosen_item = get_menu_selection(headers, items, 1,
                 (chosen_item < 0 ? 0 : chosen_item));
+
+        int item_id = menu_items[chosen_item]->id;
+
+        free(items);
+
+        // if we created our items, we must now destroy them
+        if(menu->on_create_items) {
+            int i;
+            for(i = 0; i < count; ++i) { destroy_menu_item(menu_items[i]); }
+            free(menu_items);
+        }
 
         // call our "on_select" method, which should always exist
         if(menu->on_select) {
-            chosen_item = (*(menu->on_select))(chosen_item, menu->data);
+            chosen_item = (*(menu->on_select))(menu_items[chosen_item]->id, menu->data);
         } else {
             // "on_select" doesn't exist so this menu is pointless, exit it
             break;

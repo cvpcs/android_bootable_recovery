@@ -11,23 +11,24 @@ typedef struct {
     const char* path;
 } wipe_info;
 
-static wipe_info wipe_partitions[] = {
-    { "System", "/system" },
-    { "Data", "/data" },
-    { "Boot", "/boot" },
-    { "Cache", "/cache" },
-    { "Misc", "/misc" }
-};
 #define WIPE_PARTITION_SYSTEM 0
 #define WIPE_PARTITION_DATA   1
 #define WIPE_PARTITION_BOOT   2
 #define WIPE_PARTITION_CACHE  3
 #define WIPE_PARTITION_MISC   4
-#define NUM_WIPE_PARTITIONS (sizeof(wipe_partitions) / sizeof(wipe_partitions[0]))
 
 void wipe_partition(int which, int confirm) {
+    static wipe_info wipe_partitions[] = {
+        { "System", "/system" },
+        { "Data", "/data" },
+        { "Boot", "/boot" },
+        { "Cache", "/cache" },
+        { "Misc", "/misc" }
+    };
+    static int num_partitions = sizeof(wipe_partitions) / sizeof(wipe_partitions[0]);
+
     // bail out if which is too big
-    if (which >= NUM_WIPE_PARTITIONS) {
+    if (which >= num_partitions) {
         return;
     }
 
@@ -41,9 +42,9 @@ void wipe_partition(int which, int confirm) {
             const char* confirm_prefix = "Confirm wipe of ";
             const char* confirm_postfix = "?";
             confirm = (char*)calloc(
-                                    strlen(confirm_prefix) +
-                                    strlen(wipe_partitions[which].name) +
-                                    strlen(confirm_postfix) + 1,sizeof(char));
+                    strlen(confirm_prefix) +
+                    strlen(wipe_partitions[which].name) +
+                    strlen(confirm_postfix) + 1,sizeof(char));
             strcpy(confirm, confirm_prefix);
             strcat(confirm, wipe_partitions[which].name);
             strcat(confirm, confirm_postfix);
@@ -91,7 +92,7 @@ void wipe_partition(int which, int confirm) {
         ui_print(" wipe complete.\n");
     } else {
         int i;
-        for(i = 0; i < NUM_WIPE_PARTITIONS; ++i) {
+        for(i = 0; i < num_partitions; ++i) {
             ui_print("\n-- Wiping ");
             ui_print(wipe_partitions[which].name);
             ui_print("...\n");
@@ -180,21 +181,30 @@ int wipe_menu_select(int chosen_item, void* data) {
 
 void show_wipe_menu()
 {
-    char* items[] = { " ",
-                      "Wipe All",
-                      "Wipe system",
-                      "Wipe data",
-                      "Wipe boot",
-                      "Wipe cache",
-                      "Wipe misc",
-                      "Wipe battery stats", NULL };
+    recovery_menu_item items[] = {
+                        {ITEM_WIPE_ALL,    "Wipe All"},
+                        {ITEM_WIPE_SYSTEM, "Wipe system"},
+                        {ITEM_WIPE_DATA,   "Wipe data"},
+                        {ITEM_WIPE_BOOT,   "Wipe boot"},
+                        {ITEM_WIPE_CACHE,  "Wipe cache"},
+                        {ITEM_WIPE_MISC,   "Wipe misc"},
+                        {ITEM_WIPE_BATT,   "Wipe battery stats"},
+                        NULL
+                    };
 
     char* headers[] = { "Choose an item to wipe",
                         "or press DEL or POWER to return",
                         "USE CAUTION:",
                         "These operations *CANNOT BE UNDONE*",
                         "", NULL };
-    recovery_menu* menu = create_menu(headers, items, NULL, NULL, &wipe_menu_select, NULL);
+    recovery_menu* menu = create_menu(
+            headers,
+            items,
+            /* no data */ NULL,
+            /* no on_create */ NULL,
+            /* no on_create_items */ NULL,
+            &wipe_menu_select,
+            /* no on_destroy */ NULL);
     display_menu(menu);
     destroy_menu(menu);
 }

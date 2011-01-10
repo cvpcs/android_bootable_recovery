@@ -7,12 +7,37 @@ int erase_volume(const char*);
 int get_menu_selection(char** headers, char** items, int menu_only, int initial_selection);
 
 /**
+ * This structure represents a single menu item.  When selected its ID will be returned
+ * in the on_select callback.
+ */
+typedef struct {
+    int id;
+    char* title;
+} recovery_menu_item;
+
+recovery_menu_item* create_menu_item(int id, const char* title);
+recovery_menu_item* duplicate_menu_item(recovery_menu_item* item);
+void destroy_menu_item(recovery_menu_item* item);
+
+/**
  * Menu creation callback
  *
  * Called when a menu is initially created, provides a void pointer to the data object supplied
  * when the menu was created.
  */
 typedef void(*menu_create_callback)(void*);
+
+/**
+ * Menu item creation callback
+ *
+ * Called whenever the menu loop is continuing, so that dynamic menus can change their options.
+ * Provides a void pointer to the data object supplied when the menu was created, and is expected
+ * to return a valid array of pointers to recovery_menu_item(s)
+ *
+ * NOTE: MENU ITEMS ARE EXPECTED TO BE CREATED USING THE recovery_menu_item_create() FUNCTION, AS THEY
+ *       WILL BE AUTOMATICALLY DESTROYED USING THE recovery_menu_item_destroy() FUNCTION
+ */
+typedef recovery_menu_item**(*menu_create_items_callback)(void*);
 
 /**
  * Menu selection callback
@@ -31,17 +56,21 @@ typedef int(*menu_select_callback)(int, void*);
  */
 typedef void(*menu_destroy_callback)(void*);
 
+/**
+ * This structure represents an entire menu.
+ */
 typedef struct {
-    // text headers for the menu to be displayed
+    // text headers for the menu to be displayed (NULL terminated)
     char** headers;
-    // text items for the menu to be displayed
-    char** items;
+    // text items for the menu to be displayed (NULL terminated)
+    recovery_menu_item** items;
 
     // void pointer to menu-specific data that will be passed around
     void* data;
 
     // callbacks for menu creation/selection/destruction
     menu_create_callback on_create;
+    menu_create_items_callback on_create_items;
     menu_select_callback on_select;
     menu_destroy_callback on_destroy;
 } recovery_menu;
@@ -49,12 +78,14 @@ typedef struct {
 /**
  * Creates a recovery menu object
  *
- * Note: the object will be created but data from headers, items, and data will not
- *       be serially copied over nore destroyed in a corresponding destroy_menu() call
+ * NOTE: ALL DATA WILL BE SERIALLY COPIED AND SUBSEQUENTLY DESTROYED WHEN destroy_menu() IS
+ *       CALLED, WITH THE EXCEPTION OF THE data POINTER, WHICH IS LEFT UP TO YOU TO FREE AS
+ *       IS APPROPRIATE
+ * NOTE: headers AND items SHOULD BE NULL-TERMINATED LISTS
  */
-recovery_menu* create_menu(char** headers, char** items, void* data,
-        menu_create_callback on_create, menu_select_callback on_select,
-        menu_destroy_callback on_destroy);
+recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data,
+        menu_create_callback on_create, menu_create_items_callback on_create_items,
+        menu_select_callback on_select, menu_destroy_callback on_destroy);
 
 void destroy_menu(recovery_menu* menu);
 

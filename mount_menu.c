@@ -4,38 +4,70 @@
 #include "recovery_lib.h"
 #include "roots.h"
 #include "recovery_ui.h"
+#include "recovery_menu.h"
 
-#define ITEM_S   0
-#define ITEM_D   1
-#define ITEM_C   2
-#define ITEM_SD  3
-#define ITEM_USB 4
+typedef struct {
+    char* name;
+    char* path;
+    int is_mounted;
+} mount_info;
 
-static char* get_mounted_partitions_string(char* destination, int mc, int md, int msd, int ms)
-{
-    static const char* mounted_prefix = "Mounted partitions: ";
-    static const char* mounted_cache = "/cache ";
-    static const char* mounted_data = "/data ";
-    static const char* mounted_sdcard = "/sdcard ";
-    static const char* mounted_system = "/system";
-    static const char* newline = "\n";
+#define MOUNT_PARTITION_SYSTEM 0
+#define MOUNT_PARTITION_DATA   1
+#define MOUNT_PARTITION_CACHE  2
+#define MOUNT_PARTITION_SDCARD 3
 
-    strcpy(destination,mounted_prefix);
-    if(mc) {
-	strcat(destination,mounted_cache);
-    }
-    if(md) {
-	strcat(destination,mounted_data);
-    }
-    if(msd) {
-	strcat(destination,mounted_sdcard);
-    }
-    if(ms) {
-	strcat(destination,mounted_system);
-    }
-    strcat(destination,newline);
+int count_mount_partitions(mount_info* partitions) {
+    int count = 0;
+    mount_info* p;
+    for(p = partitions; p->name; ++p, ++count);
+    return count;
+}
 
-    return(destination);
+mount_info* get_mount_partitions() {
+    // create our list defaulting to not being mounted
+    static mount_info mount_partitions[] = {
+        { "System", "/system", 0 },
+        { "Data",   "/data",   0 },
+        { "Cache",  "/cache",  0 },
+        { "Boot",   "/sdcard", 0 },
+        { NULL, NULL, 0}
+    };
+
+    // now we update the mount data
+    int count = count_mount_partitions(mount_partitions);
+    int i;
+    for(i = 0; i < count; i++) {
+        mount_partitions[i].is_mounted = is_path_mounted(mount_partitions[i].path);
+    }
+
+    return mount_partitions;
+}
+
+void toggle_mount_partition(int which) {
+    // get our updated partition list
+    mount_info* partitions = get_mount_partitions();
+
+    // get a count of how many partitions we have
+    int count = count_mount_partitions(partitions);
+
+    // bail out if our selection is invalid
+    if(which < 0 || which >= count) {
+        return;
+    }
+
+    // ok, we have a valid selection, so toggle it
+    mount_info mount = partitions[which];
+    if(mount.is_mounted) {
+		ensure_path_unmounted(mount.path);
+		ui_print("Unm");
+	} else {
+		ensure_path_mounted(mount.path);
+		ui_print("M");
+    }
+    ui_print("ounted ");
+    ui_print(mount.name);
+    ui_print("\n");
 }
 
 static int is_usb_storage_enabled()
@@ -44,35 +76,12 @@ static int is_usb_storage_enabled()
     char* buf = malloc(11*sizeof(char));
     fgets(buf, 11, fp);
     fclose(fp);
+
     if(strcmp(buf,"/dev/block")==0) {
-	return(1);
+        return(1);
+    } else {
+        return(0);
     }
-    else {
-	return(0);
-    }
-}
-
-static void get_mount_menu_options(char** items, int mc, int md, int msd, int ms, int usb)
-{
-    static char* items1[] = { "Mount /system",
-			      "Mount /data",
-			      "Mount /cache",
-			      "Mount /sdcard",
-			      "Enable USB Mass Storage",
-			      NULL };
-    static char* items2[] = { "Umount /system",
-			      "Umount /data",
-			      "Umount /cache",
-			      "Umount /sdcard",
-			      "Disable USB Mass Storage",
-			      NULL };
-
-    items[0]=ms?items2[0]:items1[0];
-    items[1]=md?items2[1]:items1[1];
-    items[2]=mc?items2[2]:items1[2];
-    items[3]=msd?items2[3]:items1[3];
-    items[4]=usb?items2[4]:items1[4];
-    items[5]=NULL;
 }
 
 static void enable_usb_mass_storage()
@@ -91,104 +100,86 @@ static void disable_usb_mass_storage()
     fclose(fp);
 }
 
+// we set our item ids equal to the mount ids, so we can create our menu dynamically
+#define ITEM_MOUNT_SYSTEM MOUNT_PARTITION_SYSTEM
+#define ITEM_MOUNT_DATA   MOUNT_PARTITION_DATA
+#define ITEM_MOUNT_CACHE  MOUNT_PARTITION_CACHE
+#define ITEM_MOUNT_SDCARD MOUNT_PARTITION_SDCARD
+#define ITEM_ENABLE_USB   9999
+
+recovery_menu_item** mount_menu_create_items(void* data) {
+    // get our updated partition list
+    mount_info* partitions = get_mount_partitions();
+
+    // get a count of how many partitions we have
+    int count = count_mount_partitions(partitions);
+
+    // build our item list (#mounts plus 2 for USB and NULL)
+    recovery_menu_item** items = (recovery_menu_item**)calloc(count + 2, sizeof(recovery_menu_item*));
+
+    // fill the beginning of the array with mount options
+    int i;
+    char* buf;
+    for(i = 0; i < count; ++i) {
+        buf = (char*)calloc(9 + strlen(partitions[i].name), sizeof(char));
+        if(partitions[i].is_mounted) {
+            strcpy(buf, "Unm");
+        } else {
+            strcpy(buf, "M");
+        }
+        strcat(buf, "ount ");
+        strcat(buf, partitions[i].name);
+        items[i] = create_menu_item(i, buf);
+        free(buf);
+    }
+    // add usb storage
+    buf = (char*)calloc(25, sizeof(char));
+    if(is_usb_storage_enabled()) {
+        strcpy(buf, "En");
+    } else {
+        strcpy(buf, "Dis");
+    }
+    strcat(buf, "able USB Mass Storage");
+    items[i++] = create_menu_item(ITEM_ENABLE_USB, buf);
+    free(buf);
+    items[i++] = NULL;
+
+    return items;
+}
+
+int mount_menu_select(int chosen_item, void* data) {
+    switch (chosen_item) {
+    case ITEM_ENABLE_USB:
+	    if(is_usb_storage_enabled()) {
+            disable_usb_mass_storage();
+	    } else {
+            enable_usb_mass_storage();
+	    }
+        break;
+    default:
+        // we default to mounting something, because even if it's invalid it will just
+        // bail out
+        toggle_mount_partition(chosen_item);
+        break;
+    }
+
+    return chosen_item;
+}
+
 void show_mount_menu()
 {
-    static char* headers[] = { "Choose a mount or unmount option",
-			       "or press DEL or POWER to return",
-			       "",
-			       "",
-			       "",
-			       NULL };
-
-    // "Mounted partitions: /cache /data /sdcard /system\n"
-    //  123456789012345678901234567890123456789012345678
-    //  0        1         2         3         4
-    char* mounted = malloc(50*sizeof(char));
-
-    int mc = is_path_mounted("/cache");
-    int md = is_path_mounted("/data");
-    int msd = is_path_mounted("/sdcard");
-    int ms = is_path_mounted("/system");
-    int usb = is_usb_storage_enabled();
-
-    char** items = malloc(6*sizeof(char*));
-
-    get_mount_menu_options(items,mc,md,msd,ms,usb);
-
-    headers[3]=get_mounted_partitions_string(mounted,mc,md,msd,ms);
-
-    int chosen_item = -1;
-
-    while(chosen_item!=ITEM_BACK) {
-	chosen_item = get_menu_selection(headers,items,1,chosen_item<0?0:chosen_item);
-
-	/*      char* act_str = malloc(18*sizeof(char));
-		sprintf(act_str, "Action is %d\n", chosen_item);
-		ui_print(act_str);*/
-
-	switch(chosen_item) {
-	case ITEM_S:
-	    if(ms) {
-		ensure_path_unmounted("/system");
-		ui_print("Unm");
-	    }
-	    else {
-		ensure_path_mounted("/system");
-		ui_print("M");
-	    }
-	    ui_print("ounted /system\n");
-	    ms^=1;
-	    break;
-	case ITEM_D:
-	    if(md) {
-		ensure_path_unmounted("/data");
-		ui_print("Unm");
-	    }
-	    else {
-		ensure_path_mounted("/data");
-		ui_print("M");
-	    }
-	    ui_print("ounted /data\n");
-	    md^=1;
-	    break;
-	case ITEM_C:
-	    if(mc) {
-		ensure_path_unmounted("/cache");
-		ui_print("Unm");
-	    }
-	    else {
-		ensure_path_mounted("/cache");
-		ui_print("M");
-	    }
-	    ui_print("ounted /cache\n");
-	    mc^=1;
-	    break;
-	case ITEM_SD:
-	    if(msd) {
-		ensure_path_unmounted("/sdcard");
-		ui_print("Unm");
-	    }
-	    else {
-		disable_usb_mass_storage();
-		usb=0;
-		ensure_path_mounted("/sdcard");
-		ui_print("M");
-	    }
-	    ui_print("ounted /sdcard\n");
-	    msd^=1;
-	    break;
-	case ITEM_USB:
-	    if(usb) {
-		disable_usb_mass_storage();
-	    }
-	    else {
-		enable_usb_mass_storage();
-		msd=0;
-	    }
-	    usb^=1;
-	    break;
-	}
-	get_mounted_partitions_string(mounted,mc,md,msd,ms);
-	get_mount_menu_options(items,mc,md,msd,ms,usb);
-    }
+    char* headers[] = { "Choose a mount or unmount option",
+                        "or press DEL or POWER to return",
+                        "", NULL };
+    recovery_menu* menu = create_menu(
+            headers,
+            /* no items */ NULL,
+            /* no data */ NULL,
+            /* no on_create */ NULL,
+            &mount_menu_create_items,
+            &mount_menu_select,
+            /* no on_destroy */ NULL);
+    display_menu(menu);
+    destroy_menu(menu);
 }
+
