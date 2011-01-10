@@ -694,6 +694,18 @@ print_property(const char *key, const char *name, void *cookie) {
 
 int
 main(int argc, char **argv) {
+    // check if we are running an internal command
+    if(strstr(argv[0], "recovery") == NULL) {
+        // determine which command and run it
+        if(strstr(argv[0], "flash_image") != NULL) {
+            return flash_image_main(argc, argv);
+        } else if(strstr(argv[0], "format") != NULL) {
+            return format_main(argc, argv);
+        } else {
+            return busybox_driver(argc, argv);
+        }
+    }
+
     time_t start = time(NULL);
 
     // If these fail, there's not really anywhere to complain...

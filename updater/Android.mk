@@ -1,5 +1,10 @@
 # Copyright 2009 The Android Open Source Project
 
+# if building on froyo, we need the internal ext4_utils library
+ifeq ($(PLATFORM_SDK_VERSION),8)
+    USE_INTERNAL_EXT4UTILS := true
+endif
+
 LOCAL_PATH := $(call my-dir)
 
 updater_src_files := \
@@ -20,8 +25,14 @@ LOCAL_SRC_FILES := $(updater_src_files)
 
 ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
 LOCAL_CFLAGS += -DUSE_EXT4
-LOCAL_C_INCLUDES += system/extras/ext4_utils
-LOCAL_STATIC_LIBRARIES += libext4_utils libz
+ifeq ($(USE_INTERNAL_EXT4UTILS),true)
+    LOCAL_C_INCLUDES += bootable/recovery/ext4_utils
+    LOCAL_STATIC_LIBRARIES += libext4_recovery_utils
+else
+    LOCAL_C_INCLUDES += system/extras/ext4_utils
+    LOCAL_STATIC_LIBRARIES += libext4_utils
+endif
+LOCAL_STATIC_LIBRARIES += libz
 endif
 
 LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UPDATER_LIBS) $(TARGET_RECOVERY_UPDATER_EXTRA_LIBS)

@@ -26,6 +26,11 @@ LOCAL_SRC_FILES := \
     verifier.c \
     encryptedfs_provisioning.c
 
+# add source files for extra commands
+LOCAL_SRC_FILES += \
+    extracommands/flash_image.c \
+    extracommands/format.c
+
 LOCAL_MODULE := recovery
 
 LOCAL_FORCE_STATIC_EXECUTABLE := true
@@ -71,39 +76,47 @@ ifeq ($(USE_INTERNAL_EXT4UTILS),true)
 else
     LOCAL_STATIC_LIBRARIES += libext4_utils
 endif
-LOCAL_STATIC_LIBRARIES += libz
+LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex
 LOCAL_STATIC_LIBRARIES += libminzip libunz libmtdutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
 
 ifeq ($(USE_INTERNAL_EXT4UTILS),true)
-    LOCAL_C_INCLUDES += $(LOCAL_PATH)/ext4_utils
+    LOCAL_C_INCLUDES += bootable/recovery/ext4_utils
 else
     LOCAL_C_INCLUDES += system/extras/ext4_utils
 endif
 
 include $(BUILD_EXECUTABLE)
 
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := format.c roots.c
-LOCAL_MODULE := format
-LOCAL_FORCE_STATIC_EXECUTABLE := true
-LOCAL_MODULE_TAGS := eng
-LOCAL_STATIC_LIBRARIES := libmtdutils libcutils libstdc++ libc
-include $(BUILD_EXECUTABLE)
+# make some recovery symlinks
+RECOVERY_LINKS := busybox flash_image format
+RECOVERY_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(RECOVERY_LINKS))
+$(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)
+$(RECOVERY_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
+	@echo "Symlink: $@ -> $(RECOVERY_BINARY)"
+	@mkdir -p $(dir $@)
+	@rm -rf $@
+	$(hide) ln -sf $(RECOVERY_BINARY) $@
+ALL_DEFAULT_INSTALLED_MODULES += $(RECOVERY_SYMLINKS)
+
+# Now let's do busybox symlinks
+BUSYBOX_LINKS := $(shell cat external/busybox/busybox-minimal.links)
+RECOVERY_BUSYBOX_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(filter-out $(exclude),$(notdir $(BUSYBOX_LINKS))))
+$(RECOVERY_BUSYBOX_SYMLINKS): BUSYBOX_BINARY := busybox
+$(RECOVERY_BUSYBOX_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
+	@echo "Symlink: $@ -> $(BUSYBOX_BINARY)"
+	@mkdir -p $(dir $@)
+	@rm -rf $@
+	$(hide) ln -sf $(BUSYBOX_BINARY) $@
+ALL_DEFAULT_INSTALLED_MODULES += $(RECOVERY_BUSYBOX_SYMLINKS)
 
 include $(CLEAR_VARS)
-
 LOCAL_SRC_FILES := verifier_test.c verifier.c
-
 LOCAL_MODULE := verifier_test
-
 LOCAL_FORCE_STATIC_EXECUTABLE := true
-
 LOCAL_MODULE_TAGS := tests
-
 LOCAL_STATIC_LIBRARIES := libmincrypt libcutils libstdc++ libc
-
 include $(BUILD_EXECUTABLE)
 
 ifeq ($(USE_INTERNAL_EXT4UTILS),true)
