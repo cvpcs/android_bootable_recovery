@@ -18,9 +18,8 @@ LOCAL_SRC_FILES := \
     install.c \
     roots.c \
     ui.c \
-    verifier.c
-
-LOCAL_SRC_FILES += test_roots.c
+    verifier.c \
+    encryptedfs_provisioning.c
 
 LOCAL_MODULE := recovery
 
@@ -62,20 +61,22 @@ ifeq ($(TARGET_RECOVERY_UI_LIB),)
 else
   LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UI_LIB)
 endif
+LOCAL_STATIC_LIBRARIES += libext4_recovery_utils libz
 LOCAL_STATIC_LIBRARIES += libminzip libunz libmtdutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
 
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/ext4_utils
+
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := format.c
+LOCAL_SRC_FILES := format.c roots.c
 LOCAL_MODULE := format
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_MODULE_TAGS := eng
 LOCAL_STATIC_LIBRARIES := libmtdutils libcutils libstdc++ libc
 include $(BUILD_EXECUTABLE)
-
 
 include $(CLEAR_VARS)
 
@@ -91,7 +92,7 @@ LOCAL_STATIC_LIBRARIES := libmincrypt libcutils libstdc++ libc
 
 include $(BUILD_EXECUTABLE)
 
-
+include $(commands_recovery_local_path)/ext4_utils/Android.mk
 include $(commands_recovery_local_path)/minui/Android.mk
 include $(commands_recovery_local_path)/minzip/Android.mk
 include $(commands_recovery_local_path)/mtdutils/Android.mk

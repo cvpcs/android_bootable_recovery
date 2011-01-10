@@ -32,7 +32,7 @@
 #include "minui/minui.h"
 #include "recovery_ui.h"
 
-#define MAX_COLS 64
+#define MAX_COLS 96
 #define MAX_ROWS 32
 
 #define CHAR_WIDTH 10
@@ -419,7 +419,7 @@ void ui_print(const char *fmt, ...)
     vsnprintf(buf, 256, fmt, ap);
     va_end(ap);
 
-    fputs(buf, stderr);
+    fputs(buf, stdout);
 
     // This can get called before ui_init(), so be careful.
     pthread_mutex_lock(&gUpdateMutex);
@@ -440,7 +440,7 @@ void ui_print(const char *fmt, ...)
     pthread_mutex_unlock(&gUpdateMutex);
 }
 
-void ui_start_menu(char** headers, char** items, int sel) {
+void ui_start_menu(char** headers, char** items, int initial_selection) {
     int i;
     pthread_mutex_lock(&gUpdateMutex);
     if (text_rows > 0 && text_cols > 0) {
@@ -457,7 +457,7 @@ void ui_start_menu(char** headers, char** items, int sel) {
         }
         menu_items = i - menu_top;
         show_menu = 1;
-        menu_sel = sel;
+        menu_sel = initial_selection;
         update_screen_locked();
     }
     pthread_mutex_unlock(&gUpdateMutex);
@@ -494,6 +494,14 @@ int ui_text_visible()
     int visible = show_text;
     pthread_mutex_unlock(&gUpdateMutex);
     return visible;
+}
+
+void ui_show_text(int visible)
+{
+    pthread_mutex_lock(&gUpdateMutex);
+    show_text = visible;
+    update_screen_locked();
+    pthread_mutex_unlock(&gUpdateMutex);
 }
 
 int ui_wait_key()

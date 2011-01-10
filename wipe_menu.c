@@ -35,23 +35,26 @@ void wipe_all(int confirm) {
             return;
         }
     }
-	ui_print("\n-- Wiping System...\n");
-    erase_root("SYSTEM:");
+    ui_print("\n-- Wiping System...\n");
+    erase_volume("/system");
     ui_print("System wipe complete.\n");
     ui_print("\n-- Wiping data...\n");
-    erase_root("DATA:");
+    erase_volume("/data");
+    if(has_datadata()) {
+        erase_volume("/datadata");
+    }
     ui_print("Data wipe complete.\n");
     ui_print("\n-- Wiping boot...\n");
-    erase_root("BOOT:");
+    erase_volume("/boot");
     ui_print("Boot wipe complete.\n");
-	ui_print("\n-- Wiping cache...\n");
-    erase_root("CACHE:");
+    ui_print("\n-- Wiping cache...\n");
+    erase_volume("/cache");
     ui_print("Misc wipe complete.\n");
     ui_print("\n-- Wiping misc...\n");
-    erase_root("MISC:");
+    erase_volume("/misc");
     ui_print("Misc wipe complete.\n");
-	ui_print("Device completely wiped.\n\n");
-	ui_print("All that remains is RZR.\n");
+    ui_print("Device completely wiped.\n\n");
+    ui_print("All that remains is RZR.\n");
 }
 
 void wipe_systemp(int confirm) {
@@ -85,7 +88,7 @@ void wipe_systemp(int confirm) {
         }
     }
     ui_print("\n-- Wiping system...\n");
-    erase_root("SYSTEM:");
+    erase_volume("/system");
     ui_print("System wipe complete.\n");
 }
 
@@ -120,7 +123,7 @@ void wipe_datap(int confirm) {
         }
     }
     ui_print("\n-- Wiping data...\n");
-    erase_root("DATA:");
+    erase_volume("/data");
     ui_print("Data wipe complete.\n");
 }
 
@@ -155,7 +158,7 @@ void wipe_bootp(int confirm) {
         }
     }
     ui_print("\n-- Wiping boot...\n");
-    erase_root("BOOT:");
+    erase_volume("/boot");
     ui_print("Boot wipe complete.\n");
 }
 
@@ -190,7 +193,7 @@ void wipe_cachep(int confirm) {
         }
     }
     ui_print("\n-- Wiping cache...\n");
-    erase_root("CACHE:");
+    erase_volume("/cache");
     ui_print("Cache wipe complete.\n");
 }
 
@@ -225,7 +228,7 @@ void wipe_miscp(int confirm) {
         }
     }
     ui_print("\n-- Wiping misc...\n");
-    erase_root("MISC:");
+    erase_volume("/misc");
     ui_print("Misc wipe complete.\n");
 }
 
@@ -259,10 +262,11 @@ void wipe_batts(int confirm) {
             return;
         }
     }
-		ui_print("\n-- Wiping battery stats...\n");
-		ensure_root_path_mounted("DATA:"); 
-		remove("/data/system/batterystats.bin");
-		ui_print("\n Battery Statistics cleared.\n");
+
+    ui_print("\n-- Wiping battery stats...\n");
+    ensure_path_mounted("/data");
+    remove("/data/system/batterystats.bin");
+    ui_print("\n Battery Statistics cleared.\n");
 }
 
 void show_wipe_menu()
@@ -274,23 +278,23 @@ void show_wipe_menu()
 			       "",
 			       NULL };
 
-    char* items[] = { " ", 
-			  "Wipe All",
-			  "Wipe system",
-		      "Wipe data",
-		      "Wipe boot",
-			  "Wipe cache",
-		      "Wipe misc",
-			  "Wipe battery stats",
+    char* items[] = { " ",
+                      "Wipe All",
+                      "Wipe system",
+                      "Wipe data",
+                      "Wipe boot",
+                      "Wipe cache",
+                      "Wipe misc",
+                      "Wipe battery stats",
 		      NULL };
 
-#define WIPE_ALL			1			  
-#define WIPE_SYSTEM         2
-#define WIPE_DATA       	3
-#define WIPE_BOOT      		4
-#define WIPE_CACHE			5
-#define WIPE_MISC   		6
-#define WIPE_BATT			7
+#define WIPE_ALL    1
+#define WIPE_SYSTEM 2
+#define WIPE_DATA   3
+#define WIPE_BOOT   4
+#define WIPE_CACHE  5
+#define WIPE_MISC   6
+#define WIPE_BATT   7
 
 int chosen_item = -1;
 
@@ -298,27 +302,27 @@ int chosen_item = -1;
 	chosen_item = get_menu_selection(headers,items,1,chosen_item<0?0:chosen_item);
 
         switch (chosen_item) {
-		
+
 	case WIPE_ALL:
 		wipe_all(ui_text_visible());
 		break;
-		
+
 	case WIPE_SYSTEM:
 		wipe_systemp(ui_text_visible());
 		break;
-		
+
 	case WIPE_DATA:
 		wipe_datap(ui_text_visible());
 		break;
-		
+
 	case WIPE_BOOT:
 		wipe_bootp(ui_text_visible());
-	    break;	
+	    break;
 
-	case WIPE_CACHE:    
+	case WIPE_CACHE:
 		wipe_cachep(ui_text_visible());
 	    break;
-		
+
 	case WIPE_MISC:
 		wipe_miscp(ui_text_visible());
 	    break;

@@ -27,67 +27,6 @@
 #include "roots.h"
 #include "common.h"
 
-typedef struct {
-    const char *name;
-    const char *device;
-    const char *device2;  // If the first one doesn't work (may be NULL)
-    const char *partition_name;
-    const char *mount_point;
-    const char *filesystem;
-} RootInfo;
-
-/* Canonical pointers.
-   xxx may just want to use enums
-*/
-static const char g_mtd_device[] = "@\0g_mtd_device";
-static const char g_raw[] = "@\0g_raw";
-static const char g_package_file[] = "@\0g_package_file";
-
-static RootInfo g_roots[] = {
-    { "BOOT:", g_mtd_device, NULL, "boot", NULL, g_raw },
-    { "CACHE:", BOARD_CACHE_DEVICE, NULL, "cache", "/cache", BOARD_CACHE_FILESYSTEM },
-    { "DATA:", BOARD_DATA_DEVICE, NULL, "userdata", "/data", BOARD_DATA_FILESYSTEM },
-#ifdef BOARD_HAS_DATADATA
-    { "DATADATA:", BOARD_DATADATA_DEVICE, NULL, "datadata", "/datadata", BOARD_DATADATA_FILESYSTEM },
-#endif
-    { "MISC:", g_mtd_device, NULL, "misc", NULL, g_raw },
-    { "PACKAGE:", NULL, NULL, NULL, NULL, g_package_file },
-    { "RECOVERY:", g_mtd_device, NULL, "recovery", "/", g_raw },
-    { "SDCARD:", BOARD_SDCARD_DEVICE_PRIMARY, BOARD_SDCARD_DEVICE_SECONDARY, NULL, "/sdcard", "vfat" },
-#ifdef BOARD_HAS_SDCARD_INTERNAL
-    { "SDINTERNAL:", BOARD_SDCARD_DEVICE_INTERNAL, NULL, NULL, "/emmc", "vfat" },
-#endif
-    { "SYSTEM:", BOARD_SYSTEM_DEVICE, NULL, "system", "/system", BOARD_SYSTEM_FILESYSTEM },
-    { "MBM:", g_mtd_device, NULL, "mbm", NULL, g_raw },
-    { "TMP:", NULL, NULL, NULL, "/tmp", NULL },
-};
-#define NUM_ROOTS (sizeof(g_roots) / sizeof(g_roots[0]))
-
-static const RootInfo *
-get_root_info_for_path(const char *root_path)
-{
-    const char *c;
-
-    /* Find the first colon.
-     */
-    c = root_path;
-    while (*c != '\0' && *c != ':') {
-        c++;
-    }
-    if (*c == '\0') {
-        return NULL;
-    }
-    size_t len = c - root_path + 1;
-    size_t i;
-    for (i = 0; i < NUM_ROOTS; i++) {
-        RootInfo *info = &g_roots[i];
-        if (strncmp(info->name, root_path, len) == 0) {
-            return info;
-        }
-    }
-    return NULL;
-}
-
 int
 format_root_device(const char *root)
 {
@@ -203,16 +142,6 @@ int main(int argc, char** argv)
         printf("Can't format %s\n", root);
         return status;
     }
-
-#ifdef BOARD_HAS_DATADATA
-    if (0 == strcmp(root, "DATA:")) {
-        status = format_root_device("DATADATA:");
-        if (status != 0) {
-            printf("Can't format %s\n", root);
-            return status;
-        }
-    }
-#endif
 
     return(status);
 }

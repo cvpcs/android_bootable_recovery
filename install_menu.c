@@ -15,6 +15,11 @@
 
 #include "nandroid_menu.h"
 
+#define ITEM_TAR    0
+#define ITEM_ZIP    1
+#define ITEM_KERNEL 2
+#define ITEM_REC    3
+
 int install_rom_from_tar(char* filename)
 {
     if (ui_key_pressed(KEY_SPACE)) {
@@ -26,7 +31,7 @@ int install_rom_from_tar(char* filename)
     ui_print("Attempting to install ROM from ");
     ui_print(filename);
     ui_print("...\n");
-  
+
     char* argv[] = { "/sbin/nandroid-mobile.sh",
 		     "--install-rom",
 		     filename,
@@ -34,7 +39,7 @@ int install_rom_from_tar(char* filename)
 		     NULL };
 
     char* envp[] = { NULL };
-  
+
     int status = runve("/sbin/nandroid-mobile.sh",argv,envp,1);
     if(!WIFEXITED(status) || WEXITSTATUS(status)!=0) {
 	ui_printf_int("ERROR: install exited with status %d\n",WEXITSTATUS(status));
@@ -47,14 +52,12 @@ int install_rom_from_tar(char* filename)
     return 0;
 }
 
-
-
 void show_choose_tar_menu()
 {
     static char* headers[] = { "Choose a ROM or press POWER to return",
 			       "",
 			       NULL };
-    
+
     char path[PATH_MAX] = "";
     DIR *dir;
     struct dirent *de;
@@ -63,7 +66,7 @@ void show_choose_tar_menu()
     char** files;
     char** list;
 
-    if (ensure_root_path_mounted("SDCARD:") != 0) {
+    if (ensure_path_mounted("/sdcard") != 0) {
 	LOGE ("Can't mount /sdcard\n");
 	return;
     }
@@ -73,7 +76,7 @@ void show_choose_tar_menu()
 	LOGE("Couldn't open /sdcard");
 	return;
     }
-    
+
     while ((de=readdir(dir)) != NULL) {
 	if (de->d_name[0] != '.' && strlen(de->d_name) > 4 && (strcmp(de->d_name+strlen(de->d_name)-8,".rom.tar")==0 || strcmp(de->d_name+strlen(de->d_name)-11,".rom.tar.gz")==0) || strcmp(de->d_name+strlen(de->d_name)-8,".rom.tgz")==0) {
 	    total++;
@@ -93,7 +96,7 @@ void show_choose_tar_menu()
 
 	list = (char**) malloc((total+1)*sizeof(char*));
 	list[total]=NULL;
-	
+
 	rewinddir(dir);
 
 	i = 0;
@@ -102,7 +105,7 @@ void show_choose_tar_menu()
 		files[i] = (char*) malloc(strlen("/sdcard/")+strlen(de->d_name)+1);
 		strcpy(files[i], "/sdcard/");
 		strcat(files[i], de->d_name);
-		
+
 		list[i] = (char*) malloc(strlen(de->d_name)+1);
 		strcpy(list[i], de->d_name);
 
@@ -130,7 +133,7 @@ void show_choose_zip_menu()
     static char* headers[] = { "Choose an update file or press POWER to return",
 			       "",
 			       NULL };
-    
+
     char path[PATH_MAX] = "";
     DIR *dir;
     struct dirent *de;
@@ -139,7 +142,7 @@ void show_choose_zip_menu()
     char** files;
     char** list;
 
-    if (ensure_root_path_mounted("SDCARD:") != 0) {
+    if (ensure_path_mounted("/sdcard") != 0) {
 	LOGE ("Can't mount /sdcard\n");
 	return;
     }
@@ -149,7 +152,7 @@ void show_choose_zip_menu()
 	LOGE("Couldn't open /sdcard");
 	return;
     }
-    
+
     while ((de=readdir(dir)) != NULL) {
 	if (de->d_name[0] != '.' && strlen(de->d_name) > 4 && (strcmp(de->d_name+strlen(de->d_name)-11,".update.zip")==0 || strcmp(de->d_name+strlen(de->d_name)-15,".rom.update.zip")==0) || strcmp(de->d_name+strlen(de->d_name)-4,".zip")==0) {
 	    total++;
@@ -169,7 +172,7 @@ void show_choose_zip_menu()
 
 	list = (char**) malloc((total+1)*sizeof(char*));
 	list[total]=NULL;
-	
+
 	rewinddir(dir);
 
 	i = 0;
@@ -178,7 +181,7 @@ void show_choose_zip_menu()
 		files[i] = (char*) malloc(strlen("/sdcard/")+strlen(de->d_name)+1);
 		strcpy(files[i], "/sdcard/");
 		strcat(files[i], de->d_name);
-		
+
 		list[i] = (char*) malloc(strlen(de->d_name)+1);
 		strcpy(list[i], de->d_name);
 
@@ -206,7 +209,7 @@ void show_kernel_menu()
     static char* headers[] = { "Choose a kernel file or press POWER to return",
 			       "",
 			       NULL };
-    
+
     char path[PATH_MAX] = "";
     DIR *dir;
     struct dirent *de;
@@ -215,7 +218,7 @@ void show_kernel_menu()
     char** files;
     char** list;
 
-    if (ensure_root_path_mounted("SDCARD:") != 0) {
+    if (ensure_path_mounted("/sdcard") != 0) {
 	LOGE ("Can't mount /sdcard\n");
 	return;
     }
@@ -225,7 +228,7 @@ void show_kernel_menu()
 	LOGE("Couldn't open /sdcard/kernels");
 	return;
     }
-    
+
     while ((de=readdir(dir)) != NULL) {
 	if (de->d_name[0] != '.' && strlen(de->d_name) > 4 && (strcmp(de->d_name+strlen(de->d_name)-8,"boot.img")==0 || strcmp(de->d_name+strlen(de->d_name)-16,"-kernel-boot.img")==0) || strcmp(de->d_name+strlen(de->d_name)-10,"kernel.img")==0) {
 	    total++;
@@ -245,7 +248,7 @@ void show_kernel_menu()
 
 	list = (char**) malloc((total+1)*sizeof(char*));
 	list[total]=NULL;
-	
+
 	rewinddir(dir);
 
 	i = 0;
@@ -254,7 +257,7 @@ void show_kernel_menu()
 		files[i] = (char*) malloc(strlen("/sdcard/kernels/")+strlen(de->d_name)+1);
 		strcpy(files[i], "/sdcard/kernels/");
 		strcat(files[i], de->d_name);
-		
+
 		list[i] = (char*) malloc(strlen(de->d_name)+1);
 		strcpy(list[i], de->d_name);
 
@@ -282,7 +285,7 @@ void show_rec_menu()
     static char* headers[] = { "Choose a recovery file or press POWER to return",
 			       "",
 			       NULL };
-    
+
     char path[PATH_MAX] = "";
     DIR *dir;
     struct dirent *de;
@@ -291,7 +294,7 @@ void show_rec_menu()
     char** files;
     char** list;
 
-    if (ensure_root_path_mounted("SDCARD:") != 0) {
+    if (ensure_path_mounted("/sdcard") != 0) {
 	LOGE ("Can't mount /sdcard\n");
 	return;
     }
@@ -301,7 +304,7 @@ void show_rec_menu()
 	LOGE("Couldn't open /sdcard/recovery");
 	return;
     }
-    
+
     while ((de=readdir(dir)) != NULL) {
 	if (de->d_name[0] != '.' && strlen(de->d_name) > 4 && (strcmp(de->d_name+strlen(de->d_name)-8,"-rec.img")==0 || strcmp(de->d_name+strlen(de->d_name)-8,"_rec.img")==0) || strcmp(de->d_name+strlen(de->d_name)-8,".rec.img")==0) {
 	    total++;
@@ -321,7 +324,7 @@ void show_rec_menu()
 
 	list = (char**) malloc((total+1)*sizeof(char*));
 	list[total]=NULL;
-	
+
 	rewinddir(dir);
 
 	i = 0;
@@ -330,7 +333,7 @@ void show_rec_menu()
 		files[i] = (char*) malloc(strlen("/sdcard/recovery/")+strlen(de->d_name)+1);
 		strcpy(files[i], "/sdcard/recovery/");
 		strcat(files[i], de->d_name);
-		
+
 		list[i] = (char*) malloc(strlen(de->d_name)+1);
 		strcpy(list[i], de->d_name);
 
@@ -353,109 +356,66 @@ void show_rec_menu()
     }
 }
 
-
-char *replace(const char *s, const char *old, const char *new)
-{
-char *ret;
-int i, count = 0;
-size_t newlen = strlen(new);
-size_t oldlen = strlen(old);
-
-for (i = 0; s[i] != '\0'; i++) {
-if (strstr(&s[i], old) == &s[i]) {
-count++;
-i += oldlen - 1;
-}
-}
-
-ret = malloc(i + count * (newlen - oldlen));
-if (ret == NULL)
-exit(EXIT_FAILURE);
-
-i = 0;
-while (*s) {
-if (strstr(s, old) == s) {
-strcpy(&ret[i], new);
-i += newlen;
-s += oldlen;
-} else
-ret[i++] = *s++;
-}
-ret[i] = '\0';
-
-return ret;
-}
-
 int install_kernel_img(char* filename) {
 
     ui_print("\n-- Install kernel img from...\n");
-	ui_print(filename);
-	ui_print("\n");
-	ensure_root_path_mounted("SDCARD:");	
-	
+    ui_print(filename);
+    ui_print("\n");
+    ensure_path_mounted("/sdcard");;
+
     char* argv[] = { "/sbin/flash_image",
 		     "boot",
 		     filename,
 		     NULL };
 
     char* envp[] = { NULL };
-  
+
     int status = runve("/sbin/flash_image",argv,envp,1);
 
-  
-	ui_print("\nKernel flash from sdcard complete.\n");
-	ui_print("\nThanks for using RZrecovery.\n");
-	return 0;
+    ui_print("\nKernel flash from sdcard complete.\n");
+    ui_print("\nThanks for using RZrecovery.\n");
+    return 0;
 }
 
 int install_rec_img(char* filename) {
 
     ui_print("\n-- Install recovery img from...\n");
-	ui_print(filename);
-	ui_print("\n");
-	ensure_root_path_mounted("SDCARD:");	
-	
+    ui_print(filename);
+    ui_print("\n");
+    ensure_path_mounted("/sdcard");
+
     char* argv[] = { "/sbin/flash_image",
 		     "recovery",
 		     filename,
 		     NULL };
 
     char* envp[] = { NULL };
-  
+
     int status = runve("/sbin/flash_image",argv,envp,1);
 
-  
-	ui_print("\nRecovery flash from sdcard complete.\n");
-	ui_print("\nThanks for using RZrecovery.\n");
-	return 0;
+    ui_print("\nRecovery flash from sdcard complete.\n");
+    ui_print("\nThanks for using RZrecovery.\n");
+    return 0;
 }
 
 int install_update_zip(char* filename) {
-
-char *path = NULL;
-
-puts(filename);
-path = replace(filename, "/sdcard/", "SDCARD:");
-
     ui_print("\n-- Install update.zip from sdcard...\n");
-	    set_sdcard_update_bootloader_message();
-		ui_print("Attempting update from...\n");
-		ui_print(filename);
-		ui_print("\n");
-	    int status = install_package(path);
-	    if (status != INSTALL_SUCCESS) {
-		ui_set_background(BACKGROUND_ICON_ERROR);
-		ui_print("Installation aborted.\n");
-	    } else if (!ui_text_visible()) {
-		return 0;  // reboot if logs aren't visible
-	    } else {
-                ui_print("\nInstall from sdcard complete.\n");
-                ui_print("\nThanks for using RZrecovery.\n");
-	    }
-	return 0;
+    set_sdcard_update_bootloader_message();
+    ui_print("Attempting update from...\n");
+    ui_print(filename);
+    ui_print("\n");
+    int status = install_package(filename);
+    if (status != INSTALL_SUCCESS) {
+	ui_set_background(BACKGROUND_ICON_ERROR);
+	ui_print("Installation aborted.\n");
+    } else if (!ui_text_visible()) {
+	return 0;  // reboot if logs aren't visible
+    } else {
+        ui_print("\nInstall from sdcard complete.\n");
+        ui_print("\nThanks for using RZrecovery.\n");
+    }
+    return 0;
 }
-
-
 
 void show_install_menu()
 {
@@ -463,17 +423,12 @@ void show_install_menu()
 			"POWER to exit",
 			"",
 			NULL };
-  
+
     char* items[] = { "Install ROM tar from SD card",
 		      "Install update.zip from SD card",
 			  "Install kernel img from /sdcard/kernels",
 			  "Install recovery img from /sdcard/recovery",
 		      NULL };
-  
-#define ITEM_TAR 	0
-#define ITEM_ZIP 	1
-#define ITEM_KERNEL 2
-#define ITEM_REC	3
 
     int chosen_item = -1;
     while (chosen_item != ITEM_BACK) {

@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <linux/input.h>
 #include <sys/wait.h>
 #include <sys/limits.h>
 #include <dirent.h>
 
 #include "common.h"
+#include "recovery_menu.h"
 #include "recovery_lib.h"
 #include "recovery_ui.h"
 #include "minui/minui.h"
@@ -193,13 +195,13 @@ static void nandroid_simple_restore()
     ui_reset_progress();
 }
 
-void nandroid_adv_r_choose_file(char* filename, char* nandroid_folder)
+void nandroid_adv_r_choose_file(char* filename, char* path)
 {
     static char* headers[] = { "Choose a backup prefix or press",
 			       "POWER or DEL to return",
 			       "",
 			       NULL };
-    char path[PATH_MAX] = "";
+
     DIR *dir;
     struct dirent *de;
     int total = 0;
@@ -207,13 +209,8 @@ void nandroid_adv_r_choose_file(char* filename, char* nandroid_folder)
     char** files;
     char** list;
 
-    if (ensure_root_path_mounted(nandroid_folder) != 0) {
-	LOGE("Can't mount %s\n", nandroid_folder);
-	return;
-    }
-
-    if (translate_root_path(nandroid_folder,path,sizeof(path))==NULL) {
-	LOGE("Bad path %s\n", path);
+    if (ensure_path_mounted(path) != 0) {
+	LOGE("Can't mount %s\n", path);
 	return;
     }
 
@@ -222,7 +219,7 @@ void nandroid_adv_r_choose_file(char* filename, char* nandroid_folder)
 	LOGE("Couldn't open directory %s\n", path);
 	return;
     }
-  
+
     while ((de=readdir(dir)) != NULL) {
 	if (de->d_name[0] != '.') {
 	    total++;
@@ -239,35 +236,35 @@ void nandroid_adv_r_choose_file(char* filename, char* nandroid_folder)
     else {
 	files = (char**) malloc((total+1)*sizeof(char*));
 	files[total]= NULL;
-    
+
 	list = (char**) malloc((total+1)*sizeof(char*));
 	list[total] = NULL;
-    
+
 	rewinddir(dir);
-    
+
 	i = 0;
 	while ((de = readdir(dir)) != NULL) {
 	    if (de->d_name[0] != '.') {
-		files[i] = (char*) malloc(strlen(nandroid_folder)+strlen(de->d_name)+1);
-		strcpy(files[i], nandroid_folder);
+		files[i] = (char*) malloc(strlen(path)+strlen(de->d_name)+1);
+		strcpy(files[i], path);
 		strcat(files[i], de->d_name);
-	
+
 		list[i] = (char *) malloc(strlen(de->d_name)+1);
 		strcpy(list[i], de->d_name);
-	
+
 		i++;
 	    }
 	}
-    
+
 	if (closedir(dir) <0) {
 	    LOGE("Failure closing directory %s\n", path);
 	    goto out; // again, eww
 	}
-    
+
 	int chosen_item = -1;
 	while (chosen_item < 0) {
 	    chosen_item = get_menu_selection(headers, list, 1, chosen_item<0?0:chosen_item);
-      
+
 	    if(chosen_item >= 0 && chosen_item != ITEM_BACK) {
 		strcpy(filename,list[chosen_item]);
 	    }

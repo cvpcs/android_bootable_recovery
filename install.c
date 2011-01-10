@@ -42,6 +42,7 @@ try_update_binary(const char *path, ZipArchive *zip) {
     const ZipEntry* binary_entry =
             mzFindZipEntry(zip, ASSUMED_UPDATE_BINARY_NAME);
     if (binary_entry == NULL) {
+        mzCloseZipArchive(zip);
         return INSTALL_CORRUPT;
     }
 
@@ -49,11 +50,13 @@ try_update_binary(const char *path, ZipArchive *zip) {
     unlink(binary);
     int fd = creat(binary, 0755);
     if (fd < 0) {
+        mzCloseZipArchive(zip);
         LOGE("Can't make %s\n", binary);
         return 1;
     }
     bool ok = mzExtractZipEntryToFile(zip, binary_entry, fd);
     close(fd);
+    mzCloseZipArchive(zip);
 
     if (!ok) {
         LOGE("Can't copy %s\n", ASSUMED_UPDATE_BINARY_NAME);
@@ -109,7 +112,7 @@ try_update_binary(const char *path, ZipArchive *zip) {
     if (pid == 0) {
         close(pipefd[0]);
         execv(binary, args);
-        fprintf(stderr, "E:Can't run %s (%s)\n", binary, strerror(errno));
+        fprintf(stdout, "E:Can't run %s (%s)\n", binary, strerror(errno));
         _exit(-1);
     }
     close(pipefd[1]);
@@ -136,7 +139,7 @@ try_update_binary(const char *path, ZipArchive *zip) {
         } else if (strcmp(command, "ui_print") == 0) {
             char* str = strtok(NULL, "\n");
             if (str) {
-                ui_print(str);
+                ui_print("%s", str);
             } else {
                 ui_print("\n");
             }
@@ -154,17 +157,6 @@ try_update_binary(const char *path, ZipArchive *zip) {
     }
 
     return INSTALL_SUCCESS;
-}
-
-static int
-handle_update_package(const char *path, ZipArchive *zip)
-{
-    // Update should take the rest of the progress bar.
-    ui_print("Installing update...\n");
-
-    int result = try_update_binary(path, zip);
-    register_package_root(NULL, NULL);  // Unregister package root
-    return result;
 }
 
 // Reads a file containing one or more public keys as produced by
@@ -242,26 +234,19 @@ exit:
 }
 
 int
-install_package(const char *root_path)
+install_package(const char *path)
 {
     ui_set_background(BACKGROUND_ICON_INSTALLING);
     ui_print("Finding update package...\n");
     ui_show_indeterminate_progress();
-    LOGI("Update location: %s\n", root_path);
+    LOGI("Update location: %s\n", path);
 
-    if (ensure_root_path_mounted(root_path) != 0) {
-        LOGE("Can't mount %s\n", root_path);
-        return INSTALL_CORRUPT;
-    }
-
-    char path[PATH_MAX] = "";
-    if (translate_root_path(root_path, path, sizeof(path)) == NULL) {
-        LOGE("Bad path %s\n", root_path);
+    if (ensure_path_mounted(path) != 0) {
+        LOGE("Can't mount %s\n", path);
         return INSTALL_CORRUPT;
     }
 
     ui_print("Opening update package...\n");
-    LOGI("Update file path: %s\n", path);
 
     /**
      * We don't bother with verification
@@ -303,7 +288,6 @@ install_package(const char *root_path)
 
     /* Verify and install the contents of the package.
      */
-    int status = handle_update_package(path, &zip);
-    mzCloseZipArchive(&zip);
-    return status;
+    ui_print("Installing update...\n");
+    return try_update_binary(path, &zip);
 }
