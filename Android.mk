@@ -1,6 +1,11 @@
 ifneq ($(TARGET_SIMULATOR),true)
 ifeq ($(TARGET_ARCH),arm)
 
+# if building on froyo, we need the internal ext4_utils library
+ifeq ($(PLATFORM_SDK_VERSION),8)
+    USE_INTERNAL_EXT4UTILS := true
+endif
+
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -61,12 +66,21 @@ ifeq ($(TARGET_RECOVERY_UI_LIB),)
 else
   LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UI_LIB)
 endif
-LOCAL_STATIC_LIBRARIES += libext4_recovery_utils libz
+ifeq ($(USE_INTERNAL_EXT4UTILS),true)
+    LOCAL_STATIC_LIBRARIES += libext4_recovery_utils
+else
+    LOCAL_STATIC_LIBRARIES += libext4_utils
+endif
+LOCAL_STATIC_LIBRARIES += libz
 LOCAL_STATIC_LIBRARIES += libminzip libunz libmtdutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
 
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/ext4_utils
+ifeq ($(USE_INTERNAL_EXT4UTILS),true)
+    LOCAL_C_INCLUDES += $(LOCAL_PATH)/ext4_utils
+else
+    LOCAL_C_INCLUDES += system/extras/ext4_utils
+endif
 
 include $(BUILD_EXECUTABLE)
 
@@ -92,7 +106,9 @@ LOCAL_STATIC_LIBRARIES := libmincrypt libcutils libstdc++ libc
 
 include $(BUILD_EXECUTABLE)
 
-include $(commands_recovery_local_path)/ext4_utils/Android.mk
+ifeq ($(USE_INTERNAL_EXT4UTILS),true)
+    include $(commands_recovery_local_path)/ext4_utils/Android.mk
+endif
 include $(commands_recovery_local_path)/minui/Android.mk
 include $(commands_recovery_local_path)/minzip/Android.mk
 include $(commands_recovery_local_path)/mtdutils/Android.mk
