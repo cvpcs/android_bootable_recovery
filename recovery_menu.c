@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/reboot.h>
 
 #include "common.h"
@@ -9,6 +10,7 @@
 #include "minui/minui.h"
 #include "roots.h"
 
+#include "recovery_menu.h"
 #include "nandroid_menu.h"
 #include "mount_menu.h"
 #include "install_menu.h"
@@ -100,6 +102,54 @@ void prompt_and_wait()
 		ui_print("also includes battery statistics wipe\n");
 	    break;
         }
+    }
+}
+
+recovery_menu* create_menu(char** headers, char** items, void* data,
+        menu_create_callback on_create, menu_select_callback on_select,
+        menu_destroy_callback on_destroy) {
+    recovery_menu* menu = (recovery_menu*)malloc(sizeof(recovery_menu));
+
+    menu->headers = headers;
+    menu->items = items;
+    menu->data = data;
+    menu->on_create = on_create;
+    menu->on_select = on_select;
+    menu->on_destroy = on_destroy;
+
+    return menu;
+}
+
+void destroy_menu(recovery_menu* menu) {
+    free(menu);
+}
+
+void display_menu(recovery_menu* menu)
+{
+    char** headers = prepend_title(menu->headers);
+
+    // if we were provided with an "on_create" method, call it for this menu
+    if(menu->on_create) {
+        (*(menu->on_create))(menu->data);
+    }
+
+    int chosen_item = -1;
+    while(chosen_item!=ITEM_BACK) {
+        chosen_item = get_menu_selection(menu->headers, menu->items, 1,
+                (chosen_item < 0 ? 0 : chosen_item));
+
+        // call our "on_select" method, which should always exist
+        if(menu->on_select) {
+            chosen_item = (*(menu->on_select))(chosen_item, menu->data);
+        } else {
+            // "on_select" doesn't exist so this menu is pointless, exit it
+            break;
+        }
+	}
+
+    // cleanup code
+    if(menu->on_destroy) {
+        (*(menu->on_destroy))(menu->data);
     }
 }
 
