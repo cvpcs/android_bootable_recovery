@@ -475,7 +475,7 @@ void ui_start_menu(char** headers, char** items, int initial_selection) {
 
         menu_items = i - menu_top;
         show_menu = 1;
-        menu_sel = menu_show_start = initial_selection;
+        menu_sel = menu_show_start = 0;
         update_screen_locked();
     }
     pthread_mutex_unlock(&gUpdateMutex);
@@ -490,7 +490,7 @@ int ui_menu_select(int sel) {
 
         if (menu_sel < 0) {
 		menu_sel = menu_items - 1;
-		menu_show_start = text_rows - menu_top;
+		menu_show_start = menu_items - (text_rows - menu_top);
 		if(menu_show_start < 0) { menu_show_start = 0; }
 	} else if (menu_sel >= menu_items) {
 		menu_sel = 0;
