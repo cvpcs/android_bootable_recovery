@@ -342,7 +342,7 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
     // open the current directory
     DIR* dir = opendir(fsm->cur_path);
     if (dir == NULL) {
-        LOGE("Couldn't open %s (%s)", fsm->cur_path, strerror(errno));
+        LOGE("Couldn't open %s (%s)\n", fsm->cur_path, strerror(errno));
 	    return NULL;
     }
 
@@ -428,7 +428,7 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
         destroy_file_select_menu_item_list(dir_items);
 
         // report the failure
-        LOGE("Failure closing directory %s (%s)", fsm->cur_path, strerror(errno));
+        LOGE("Failure closing directory %s (%s)\n", fsm->cur_path, strerror(errno));
 	    return NULL;
 	}
 
@@ -512,7 +512,7 @@ int file_select_menu_select(int chosen_item, void* data) {
 void display_file_select_menu(char* base_path, char** exts, file_select_callback on_select) {
     // make sure our path is mounted
     if (ensure_path_mounted(base_path) != 0) {
-        LOGE("Can't mount %s (%s)", base_path, strerror(errno));
+        LOGE("Can't mount %s (%s)\n", base_path, strerror(errno));
         return;
     }
 
