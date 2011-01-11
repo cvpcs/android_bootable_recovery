@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/reboot.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <errno.h>
 
 #include "common.h"
 #include "install.h"
@@ -113,7 +116,7 @@ int count_menu_items(recovery_menu_item** list) {
     return count;
 }
 
-int count_menu_headers(char** list) {
+int count_strlist_items(char** list) {
     // count how many items we have
     int count = 0;
     char** p;
@@ -133,8 +136,10 @@ recovery_menu_item* duplicate_menu_item(recovery_menu_item* item) {
 }
 
 void destroy_menu_item(recovery_menu_item* item) {
-    free(item->title);
-    free(item);
+    if(item) {
+        free(item->title);
+        free(item);
+    }
 }
 
 recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data,
@@ -146,7 +151,7 @@ recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data
     int i;
 
     // copy the headers
-    int num_headers = count_menu_headers(headers);
+    int num_headers = count_strlist_items(headers);
     menu->headers = (char**)calloc(num_headers + 1, sizeof(char*));
     for(i = 0; i < num_headers; ++i) { menu->headers[i] = strdup(headers[i]); }
     menu->headers[num_headers] = NULL;
@@ -171,23 +176,25 @@ recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data
 }
 
 void destroy_menu(recovery_menu* menu) {
-    // good old iterator
-    int i;
+    if(menu) {
+        // good old iterator
+        int i;
 
-    // destroy the headers
-    int num_headers = count_menu_headers(menu->headers);
-    for(i = 0; i < num_headers; ++i) { free(menu->headers[i]); }
-    free(menu->headers);
+        // destroy the headers
+        int num_headers = count_strlist_items(menu->headers);
+        for(i = 0; i < num_headers; ++i) { free(menu->headers[i]); }
+        free(menu->headers);
 
-    // destroy the items if they exists
-    if(menu->items) {
-        int num_items = count_menu_items(menu->items);
-        for(i = 0; i < num_items; ++i) { destroy_menu_item(menu->items[i]); }
-        free(menu->items);
+        // destroy the items if they exists
+        if(menu->items) {
+            int num_items = count_menu_items(menu->items);
+            for(i = 0; i < num_items; ++i) { destroy_menu_item(menu->items[i]); }
+            free(menu->items);
+        }
+
+        // finally destroy the menu
+        free(menu);
     }
-
-    // finally destroy the menu
-    free(menu);
 }
 
 void display_menu(recovery_menu* menu)
@@ -253,3 +260,269 @@ void display_menu(recovery_menu* menu)
     }
 }
 
+typedef struct {
+    int id;
+    char* name;
+    char* path;
+    int is_dir;
+} file_select_menu_item;
+
+typedef struct {
+    char** exts; // the valid extension list
+    char* base_path; // the base path we are allowed to access (going "back" after this will consititue leaving the menu)
+    char* cur_path; // the current "base path" we are viewing
+    file_select_menu_item** dirs; // list of current directories
+    file_select_menu_item** files; // list of current files
+    file_select_callback callback; // the callback
+} file_select_menu;
+
+#define FILE_SELECT_MENU_ITEM_DIR_ID_BASE 1000
+#define FILE_SELECT_MENU_ITEM_FILE_ID_BASE 2000
+
+file_select_menu_item* create_file_select_menu_item(int id, char* name, char* base_path, int is_dir) {
+    file_select_menu_item* item = (file_select_menu_item*)malloc(sizeof(file_select_menu_item));
+    item->id = id;
+    item->path = (char*)malloc(strlen(base_path) + strlen(name) + 2);
+    strcpy(item->path, base_path);
+    strcat(item->path, "/");
+    strcat(item->path, name);
+    item->is_dir = is_dir;
+    if(item->is_dir) {
+        // if item is a directory, append a "/" to its name
+        item->name = (char*)malloc(strlen(name) + 2);
+        strcpy(item->name, name);
+        strcat(item->name, "/");
+    } else {
+        item->name = strdup(name);
+    }
+    return item;
+}
+
+void destroy_file_select_menu_item(file_select_menu_item* item) {
+    if(item) {
+        free(item->name);
+        free(item->path);
+        free(item);
+    }
+}
+
+int count_file_select_menu_items(file_select_menu_item** list) {
+    // count how many items we have
+    int count = 0;
+    file_select_menu_item** p;
+    for (p = list; *p; ++p, ++count);
+    return count;
+}
+
+void destroy_file_select_menu_item_list(file_select_menu_item** list) {
+    if(list) {
+        int count = count_file_select_menu_items(list);
+        int i;
+        for(i = 0; i < count; ++i) {
+            destroy_file_select_menu_item(list[i]);
+        }
+        free(list);
+    }
+}
+
+recovery_menu_item** file_select_menu_create_items(void* data) {
+    file_select_menu* fsm = (file_select_menu*)data;
+
+    // open the current directory
+    DIR* dir = opendir(fsm->cur_path);
+    if (dir == NULL) {
+        LOGE("Couldn't open %s (%s)", fsm->cur_path, strerror(errno));
+	    return NULL;
+    }
+
+    int fcount = 0;
+    int dcount = 0;
+    int i;
+
+    // get a count of our extensions
+    int ext_count = count_strlist_items(fsm->exts);
+
+    // first we count our files/directories
+    struct dirent *de;
+    while ((de=readdir(dir)) != NULL) {
+        // ignore . and .. and hidden files
+        if (de->d_name[0] != '.') {
+            if(de->d_type == DT_DIR) {
+                // directory types are always valid
+                ++dcount;
+            } else if(de->d_type == DT_REG) {
+                // regular file, check extensions
+                if(ext_count > 0) {
+                    int dname_len = strlen(de->d_name);
+                    for(i = 0; i < ext_count; ++i) {
+                        int ext_len = strlen(fsm->exts[i]);
+                        if(dname_len > ext_len && strcmp(de->d_name + (dname_len - ext_len), fsm->exts[i]) == 0) {
+                            ++fcount;
+                            break;
+                        }
+                    }
+                } else {
+                    ++fcount;
+                }
+            }
+        }
+    }
+
+    file_select_menu_item** file_items = (file_select_menu_item**)calloc(fcount + 1, sizeof(file_select_menu_item*));
+    file_select_menu_item** dir_items = (file_select_menu_item**)calloc(dcount + 1, sizeof(file_select_menu_item*));
+    file_items[fcount] = NULL;
+    dir_items[dcount] = NULL;
+
+	rewinddir(dir);
+
+    int j = 0;
+    int k = 0;
+	while ((de = readdir(dir)) != NULL) {
+        if (de->d_name[0] != '.') {
+            int valid = 0;
+
+            if(de->d_type == DT_DIR) {
+                valid = 1;
+            } else if(de->d_type == DT_REG) {
+                // regular file, check extensions
+                if(ext_count > 0) {
+                    int dname_len = strlen(de->d_name);
+                    for(i = 0; i < ext_count; ++i) {
+                        int ext_len = strlen(fsm->exts[i]);
+                        if(dname_len > ext_len && strcmp(de->d_name + (dname_len - ext_len), fsm->exts[i]) == 0) {
+                            valid = 1;
+                            break;
+                        }
+                    }
+                } else {
+                    valid = 1;
+                }
+            }
+
+            if(valid) {
+                if(de->d_type == DT_DIR && j < dcount) {
+                    dir_items[j] = create_file_select_menu_item(FILE_SELECT_MENU_ITEM_DIR_ID_BASE + j, de->d_name, fsm->cur_path, 1);
+                    ++j;
+                } else if(k < fcount) {
+                    file_items[k] = create_file_select_menu_item(FILE_SELECT_MENU_ITEM_FILE_ID_BASE + k, de->d_name, fsm->cur_path, 0);
+                    ++k;
+                }
+            }
+        }
+    }
+
+	if (closedir(dir) < 0) {
+        // clear our menu items
+        destroy_file_select_menu_item_list(file_items);
+        destroy_file_select_menu_item_list(dir_items);
+
+        // report the failure
+        LOGE("Failure closing directory %s (%s)", fsm->cur_path, strerror(errno));
+	    return NULL;
+	}
+
+    // reset our items in the data structure
+    destroy_file_select_menu_item_list(fsm->files);
+    destroy_file_select_menu_item_list(fsm->dirs);
+    fsm->dirs = dir_items;
+    fsm->files = file_items;
+
+    // create our menu items
+    recovery_menu_item* items[dcount + fcount + 1];
+    i = 0;
+    for(j = 0; j < dcount; ++i, ++j) {
+        items[i] = create_menu_item(fsm->dirs[j]->id, fsm->dirs[j]->name);
+    }
+    for(k = 0; k < fcount; ++i, ++j) {
+        items[i] = create_menu_item(fsm->files[k]->id, fsm->files[k]->name);
+    }
+    items[i] = NULL;
+
+    return items;
+}
+
+int file_select_menu_select(int chosen_item, void* data) {
+    // get our menu data
+    file_select_menu* fsm = (file_select_menu*)data;
+
+    // are we going back?
+    if(chosen_item == ITEM_BACK) {
+        // only report back if cur_path == base_path
+        if(strcmp(fsm->base_path, fsm->cur_path) != 0) {
+            // we need to reset our current path
+            char* new_path = strdup(dirname(fsm->cur_path));
+            free(fsm->cur_path);
+            fsm->cur_path = new_path;
+            return NO_ACTION;
+        } else {
+            return ITEM_BACK;
+        }
+    }
+
+    // if we're here, we need to process a possible click on a directory/file
+
+    // get our counts
+    int dcount = count_file_select_menu_items(fsm->dirs);
+    int fcount = count_file_select_menu_items(fsm->files);
+
+    // did we choose a dir?
+    int i;
+    for(i = 0; i < dcount; i++) {
+        if(chosen_item == fsm->dirs[i]->id) {
+            // we selected a directory, so reset the current path and return
+            free(fsm->cur_path);
+            fsm->cur_path = strdup(fsm->dirs[i]->path);
+            return NO_ACTION;
+        }
+    }
+
+    // did we choose a file?
+    for(i = 0; i < fcount; i++) {
+        if(chosen_item == fsm->files[i]->id) {
+            // we selected a file! woohoo! time to call our callback and get the hell out of dodge
+            (*(fsm->callback))(fsm->files[i]->path);
+            return ITEM_BACK;
+        }
+    }
+
+    // no idea what the hell they clicked on so just pass through
+    return chosen_item;
+}
+
+void display_file_select_menu(char* base_path, char** exts, file_select_callback on_select) {
+    // make sure our path is mounted
+    if (ensure_path_mounted(base_path) != 0) {
+        LOGE("Can't mount %s (%s)", base_path, strerror(errno));
+        return;
+    }
+
+    // create our headers
+    char* headers[] = { "Choose a file/directory",
+                        "", NULL };
+
+    // create our data structure
+    file_select_menu* fsm = (file_select_menu*)malloc(sizeof(file_select_menu));
+    fsm->exts = exts;
+    fsm->base_path = base_path;
+    fsm->cur_path = strdup(base_path);
+    fsm->dirs = NULL;
+    fsm->files = NULL;
+    fsm->callback = on_select;
+
+    recovery_menu* menu = create_menu(
+            headers,
+            /* no items */ NULL,
+            (void*)fsm,
+            /* no on_create */ NULL,
+            &file_select_menu_create_items,
+            &file_select_menu_select,
+            /* no on_destroy */ NULL);
+    display_menu(menu);
+    destroy_menu(menu);
+
+    // destroy our data structure
+    destroy_file_select_menu_item_list(fsm->dirs);
+    destroy_file_select_menu_item_list(fsm->files);
+    free(fsm->cur_path);
+    free(fsm);
+}

@@ -91,4 +91,18 @@ void destroy_menu(recovery_menu* menu);
 
 void display_menu(recovery_menu* menu);
 
+typedef void(*file_select_callback)(char*);
+
+/**
+ * Display file selection menu
+ *
+ * shows a file selection menu, returns true or false as to whether you should keep displaying this
+ * menu (file not selected) or break out (file selected)
+ *
+ * \param base_path path to start at
+ * \param ext array of valid extensions to show
+ * \param on_select method to call when a file is selected
+ */
+void display_file_select_menu(char* base_path, char** exts, file_select_callback on_select);
+
 #endif//RECOVERY_RECOVERY_MENU_H_
