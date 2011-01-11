@@ -243,6 +243,24 @@ Value* FormatFn(const char* name, State* state, int argc, Expr* argv[]) {
         }
         result = location;
 #endif
+    } else if (strcmp(fs_type, "ext2") == 0) {
+        int status = format_ext2_device(location);
+        if (status != 0) {
+            fprintf(stderr, "%s: format_ext2_device failed (%d) on %s",
+                    name, status, location);
+            result = strdup("");
+            goto done;
+        }
+        result = location;
+    } else if (strcmp(fs_type, "ext3") == 0) {
+        int status = format_ext3_device(location);
+        if (status != 0) {
+            fprintf(stderr, "%s: format_ext3_device failed (%d) on %s",
+                    name, status, location);
+            result = strdup("");
+            goto done;
+        }
+        result = location;
     } else {
         fprintf(stderr, "%s: unsupported fs_type \"%s\" partition_type \"%s\"",
                 name, fs_type, partition_type);
@@ -680,57 +698,10 @@ Value* WriteRawImageFn(const char* name, State* state, int argc, Expr* argv[]) {
         goto done;
     }
 
-    mtd_scan_partitions();
-    const MtdPartition* mtd = mtd_find_partition_by_name(partition);
-    if (mtd == NULL) {
-        fprintf(stderr, "%s: no mtd partition named \"%s\"\n", name, partition);
+    if (0 == restore_raw_partition(partition, filename))
+        result = strdup(partition);
+    else
         result = strdup("");
-        goto done;
-    }
-
-    MtdWriteContext* ctx = mtd_write_partition(mtd);
-    if (ctx == NULL) {
-        fprintf(stderr, "%s: can't write mtd partition \"%s\"\n",
-                name, partition);
-        result = strdup("");
-        goto done;
-    }
-
-    bool success;
-
-    FILE* f = fopen(filename, "rb");
-    if (f == NULL) {
-        fprintf(stderr, "%s: can't open %s: %s\n",
-                name, filename, strerror(errno));
-        result = strdup("");
-        goto done;
-    }
-
-    success = true;
-    char* buffer = malloc(BUFSIZ);
-    int read;
-    while (success && (read = fread(buffer, 1, BUFSIZ, f)) > 0) {
-        int wrote = mtd_write_data(ctx, buffer, read);
-        success = success && (wrote == read);
-        if (!success) {
-            fprintf(stderr, "mtd_write_data to %s failed: %s\n",
-                    partition, strerror(errno));
-        }
-    }
-    free(buffer);
-    fclose(f);
-
-    if (mtd_erase_blocks(ctx, -1) == -1) {
-        fprintf(stderr, "%s: error erasing blocks of %s\n", name, partition);
-    }
-    if (mtd_write_close(ctx) != 0) {
-        fprintf(stderr, "%s: error closing write of %s\n", name, partition);
-    }
-
-    printf("%s %s partition from %s\n",
-           success ? "wrote" : "failed to write", partition, filename);
-
-    result = success ? partition : strdup("");
 
 done:
     if (result != partition) free(partition);
