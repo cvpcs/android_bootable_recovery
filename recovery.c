@@ -44,7 +44,9 @@
 
 #include "recovery_lib.h"
 #include "recovery_menu.h"
-#include "install_menu.h"
+
+// we need this for tgz support
+#include "menus/install_menu.h"
 
 static const struct option OPTIONS[] = {
   { "send_intent", required_argument, NULL, 's' },

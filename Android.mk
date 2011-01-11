@@ -15,10 +15,6 @@ LOCAL_SRC_FILES := \
     recovery.c \
     recovery_lib.c \
     recovery_menu.c \
-    nandroid_menu.c \
-    install_menu.c \
-    mount_menu.c \
-    wipe_menu.c \
     bootloader.c \
     install.c \
     roots.c \
@@ -30,6 +26,13 @@ LOCAL_SRC_FILES := \
 LOCAL_SRC_FILES += \
     extracommands/flash_image.c \
     extracommands/format.c
+
+# add our menus
+LOCAL_SRC_FILES += \
+    menus/nandroid_menu.c \
+    menus/install_menu.c \
+    menus/mount_menu.c \
+    menus/wipe_menu.c
 
 LOCAL_MODULE := recovery
 

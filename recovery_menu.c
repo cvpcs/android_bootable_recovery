@@ -9,15 +9,16 @@
 #include "common.h"
 #include "install.h"
 #include "recovery_lib.h"
+#include "recovery_menu.h"
 #include "recovery_ui.h"
 #include "minui/minui.h"
 #include "roots.h"
 
-#include "recovery_menu.h"
-#include "nandroid_menu.h"
-#include "mount_menu.h"
-#include "install_menu.h"
-#include "wipe_menu.h"
+// menus
+#include "menus/nandroid_menu.h"
+#include "menus/mount_menu.h"
+#include "menus/install_menu.h"
+#include "menus/wipe_menu.h"
 
 
 void prompt_and_wait()
