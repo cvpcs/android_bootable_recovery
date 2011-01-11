@@ -40,7 +40,6 @@
 #include "roots.h"
 #include "recovery_ui.h"
 #include "encryptedfs_provisioning.h"
-#include "extracommands/extracommands.h"
 
 #include "recovery_lib.h"
 #include "recovery_menu.h"
@@ -677,8 +676,10 @@ main(int argc, char **argv) {
         // determine which command and run it
         if(strstr(argv[0], "flash_image") != NULL) {
             return flash_image_main(argc, argv);
-        } else if(strstr(argv[0], "format") != NULL) {
-            return format_main(argc, argv);
+        } else if(strstr(argv[0], "erase_image") != NULL) {
+            return erase_image_main(argc, argv);
+        } else if(strstr(argv[0], "dump_image") != NULL) {
+            return dump_image_main(argc, argv);
         } else {
             return busybox_driver(argc, argv);
         }

@@ -18,14 +18,10 @@ LOCAL_SRC_FILES := \
     bootloader.c \
     install.c \
     roots.c \
+    mounts.c \
     ui.c \
     verifier.c \
     encryptedfs_provisioning.c
-
-# add source files for extra commands
-LOCAL_SRC_FILES += \
-    extracommands/flash_image.c \
-    extracommands/format.c
 
 # add our menus
 LOCAL_SRC_FILES += \
@@ -74,7 +70,8 @@ else
     LOCAL_STATIC_LIBRARIES += libext4_utils
 endif
 LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex
-LOCAL_STATIC_LIBRARIES += libminzip libunz libmtdutils libmincrypt
+LOCAL_STATIC_LIBRARIES += libflash_image libdump_image liberase_image
+LOCAL_STATIC_LIBRARIES += libminzip libunz libflashutils libmtdutils libmmcutils libbmlutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
 
@@ -87,7 +84,7 @@ endif
 include $(BUILD_EXECUTABLE)
 
 # make some recovery symlinks
-RECOVERY_LINKS := busybox flash_image format
+RECOVERY_LINKS := busybox flash_image dump_image erase_image
 RECOVERY_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(RECOVERY_LINKS))
 $(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)
 $(RECOVERY_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
@@ -121,7 +118,10 @@ ifeq ($(USE_INTERNAL_EXT4UTILS),true)
 endif
 include $(commands_recovery_local_path)/minui/Android.mk
 include $(commands_recovery_local_path)/minzip/Android.mk
+include $(commands_recovery_local_path)/flashutils/Android.mk
 include $(commands_recovery_local_path)/mtdutils/Android.mk
+include $(commands_recovery_local_path)/mmcutils/Android.mk
+include $(commands_recovery_local_path)/bmlutils/Android.mk
 include $(commands_recovery_local_path)/tools/Android.mk
 include $(commands_recovery_local_path)/edify/Android.mk
 include $(commands_recovery_local_path)/updater/Android.mk
