@@ -11,6 +11,7 @@
 #include "recovery_ui.h"
 #include "roots.h"
 #include "install.h"
+#include "extracommands/extracommands.h"
 #include <string.h>
 
 #include "nandroid_menu.h"
@@ -68,14 +69,13 @@ void install_kernel_img(char* filename) {
     ui_print("\n");
     ensure_path_mounted(filename);
 
-    char* argv[] = { "/sbin/flash_image",
+    int argc = 3;
+    char* argv[] = { "flash_image",
                      "boot",
                      filename,
                      NULL };
 
-    char* envp[] = { NULL };
-
-    int status = runve("/sbin/flash_image",argv,envp,1);
+    int status = flash_image_main(argc, argv);
 
     ui_print("\nKernel flash from sdcard complete.\n");
     ui_print("\nThanks for using RZrecovery.\n");
@@ -87,14 +87,13 @@ void install_recovery_img(char* filename) {
     ui_print("\n");
     ensure_path_mounted(filename);
 
-    char* argv[] = { "/sbin/flash_image",
+    int argc = 3;
+    char* argv[] = { "flash_image",
                      "recovery",
                      filename,
                      NULL };
 
-    char* envp[] = { NULL };
-
-    int status = runve("/sbin/flash_image",argv,envp,1);
+    int status = flash_image_main(argc, argv);
 
     ui_print("\nRecovery flash from sdcard complete.\n");
     ui_print("\nThanks for using RZrecovery.\n");
