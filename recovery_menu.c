@@ -22,7 +22,6 @@
 
 void prompt_and_wait()
 {
-
     char* menu_headers[] = { "Modded by raidzero",
 			     "",
 			     NULL };
@@ -31,7 +30,7 @@ void prompt_and_wait()
 
     char* items[] = { "Reboot into Android",
 		      "Reboot into Recovery",
-                      "Shutdown system",
+              "Shutdown system",
 		      "Wipe partitions",
 		      "Mount options",
 		      "Backup/restore",
@@ -138,11 +137,16 @@ recovery_menu_item* duplicate_menu_item(recovery_menu_item* item) {
 void destroy_menu_item(recovery_menu_item* item) {
     if(item) {
         free(item->title);
+
+        item->id = 0;
+        item->title = NULL;
+
         free(item);
+        item = NULL;
     }
 }
 
-recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data,
+recovery_menu* create_menu(char** headers, recovery_menu_item** items, void* data,
         menu_create_callback on_create, menu_create_items_callback on_create_items,
         menu_select_callback on_select, menu_destroy_callback on_destroy) {
     recovery_menu* menu = (recovery_menu*)malloc(sizeof(recovery_menu));
@@ -150,22 +154,17 @@ recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data
     // good old iterator
     int i;
 
-    // copy the headers
-    int num_headers = count_strlist_items(headers);
-    menu->headers = (char**)calloc(num_headers + 1, sizeof(char*));
-    for(i = 0; i < num_headers; ++i) { menu->headers[i] = strdup(headers[i]); }
-    menu->headers[num_headers] = NULL;
+ui_print("D:counting headers: ");
+    int ch = count_strlist_items(headers);
+ui_print("found %d\n", ch);
+ui_print("D:creating headers\n");
+    menu->headers = (char**)calloc(ch + 1, sizeof(char*));
+ui_print("D:copying headers\n");
+    for(i = 0; i < ch; ++i) { menu->headers[i] = strdup(headers[i]); }
+ui_print("D:null-terminating headers\n");
+    menu->headers[i] = NULL;
 
-    // copy the items if we have any (might be NULL if useing on_create_items
-    if(items) {
-        int num_items = count_menu_items(&items);
-        menu->items = (recovery_menu_item**)calloc(num_items + 1, sizeof(recovery_menu_item*));
-        for(i = 0; i < num_items; ++i) { menu->items[i] = duplicate_menu_item(&items[i]); }
-        menu->items[num_items] = NULL;
-    } else {
-        menu->items = NULL;
-    }
-
+    menu->items = items;
     menu->data = data;
     menu->on_create = on_create;
     menu->on_create_items = on_create_items;
@@ -184,16 +183,26 @@ void destroy_menu(recovery_menu* menu) {
         int num_headers = count_strlist_items(menu->headers);
         for(i = 0; i < num_headers; ++i) { free(menu->headers[i]); }
         free(menu->headers);
+        menu->headers = NULL;
 
         // destroy the items if they exists
         if(menu->items) {
             int num_items = count_menu_items(menu->items);
             for(i = 0; i < num_items; ++i) { destroy_menu_item(menu->items[i]); }
             free(menu->items);
+            menu->items = NULL;
         }
+
+        // nullify other stuff
+        menu->data = NULL;
+        menu->on_create = NULL;
+        menu->on_create_items = NULL;
+        menu->on_select = NULL;
+        menu->on_destroy = NULL;
 
         // finally destroy the menu
         free(menu);
+        menu = NULL;
     }
 }
 
@@ -208,7 +217,7 @@ void display_menu(recovery_menu* menu)
 
     int chosen_item = -1;
     while(chosen_item != ITEM_BACK) {
-        recovery_menu_item** menu_items = menu->items;        
+        recovery_menu_item** menu_items = menu->items;
 
         // if we are dynamically creating items, go for it here
         if(menu->on_create_items) {
@@ -244,10 +253,11 @@ void display_menu(recovery_menu* menu)
             for(i = 0; i < count; ++i) { destroy_menu_item(menu_items[i]); }
             free(menu_items);
         }
+        menu_items = NULL;
 
         // call our "on_select" method, which should always exist
         if(menu->on_select) {
-            chosen_item = (*(menu->on_select))(menu_items[chosen_item]->id, menu->data);
+            chosen_item = (*(menu->on_select))(item_id, menu->data);
         } else {
             // "on_select" doesn't exist so this menu is pointless, exit it
             break;
@@ -428,7 +438,7 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
     fsm->files = file_items;
 
     // create our menu items
-    recovery_menu_item* items[dcount + fcount + 1];
+    recovery_menu_item** items = (recovery_menu_item**)calloc(dcount + fcount + 1, sizeof(recovery_menu_item*));
     i = 0;
     for(j = 0; j < dcount; ++i, ++j) {
         items[i] = create_menu_item(fsm->dirs[j]->id, fsm->dirs[j]->name);

@@ -33,31 +33,41 @@ void wipe_partition(int which, int confirm) {
     }
 
     if (confirm) {
-        static char** title_headers = NULL;
+        char** title_headers = NULL;
 
         char* confirm;
+        char* confirm_select;
 
         // if we have a specific one, then use it
+        const char* confirm_prefix = "Confirm wipe of ";
+        const char* confirm_suffix = "?";
+        const char* confirm_select_prefix = " Yes -- wipe ";
         if(which >= 0) {
-            const char* confirm_prefix = "Confirm wipe of ";
-            const char* confirm_postfix = "?";
             confirm = (char*)calloc(
                     strlen(confirm_prefix) +
                     strlen(wipe_partitions[which].name) +
-                    strlen(confirm_postfix) + 1,sizeof(char));
+                    strlen(confirm_suffix) + 1, sizeof(char));
             strcpy(confirm, confirm_prefix);
             strcat(confirm, wipe_partitions[which].name);
-            strcat(confirm, confirm_postfix);
+            strcat(confirm, confirm_suffix);
+
+            confirm_select = (char*)calloc(
+                    strlen(confirm_select_prefix) +
+                    strlen(wipe_partitions[which].name) + 1, sizeof(char));
+            strcpy(confirm_select, confirm_select_prefix);
+            strcat(confirm_select, wipe_partitions[which].name);
         } else {
             // we are wiping all
-            confirm = strdup("Confirm wipe of all?");
+            confirm = strdup("Confirm wipe of EVERYTHING?");
+            confirm_select = strdup(" Yes -- wipe EVERYTHING");
         }
 
         char* headers[] = { confirm,
                             "THIS CAN NOT BE UNDONE.",
-                            "",
-                            NULL };
+                            "", NULL };
         title_headers = prepend_title(headers);
+
+        
 
         char* items[] = { " No",
                           " No",
@@ -66,49 +76,51 @@ void wipe_partition(int which, int confirm) {
                           " No",
                           " No",
                           " No",
-                          " Yes -- Wipe EVERYTHING",   // [7]
+                          confirm_select,   // [7]
                           " No",
                           " No",
                           " No",
                           NULL };
 
         int chosen_item = get_menu_selection(title_headers, items, 1, 0);
+        free(confirm);
+        free(confirm_select);
         if (chosen_item != 7) {
             return;
         }
-
-        free(confirm);
     }
 
     if(which >= 0) {
-        ui_print("\n-- Wiping ");
+        ui_print("-- Wiping ");
         ui_print(wipe_partitions[which].name);
-        ui_print("...\n");
+        ui_print("... ");
         erase_volume(wipe_partitions[which].path);
+        ui_print(" complete.\n");
         if(which == WIPE_PARTITION_DATA && has_datadata()) {
+            ui_print("-- Wiping Datadata ... ");
             erase_volume("/datadata");
+            ui_print(" complete.\n");
         }
-        ui_print(wipe_partitions[which].name);
-        ui_print(" wipe complete.\n");
     } else {
         int i;
         for(i = 0; i < num_partitions; ++i) {
-            ui_print("\n-- Wiping ");
-            ui_print(wipe_partitions[which].name);
-            ui_print("...\n");
-            erase_volume(wipe_partitions[which].path);
-            ui_print(wipe_partitions[which].name);
-            ui_print(" wipe complete.\n");
+            ui_print("-- Wiping ");
+            ui_print(wipe_partitions[i].name);
+            ui_print("... ");
+            erase_volume(wipe_partitions[i].path);
+            ui_print("complete.\n");
         }
         if(has_datadata()) {
+            ui_print("-- Wiping Datadata ... ");
             erase_volume("/datadata");
+            ui_print(" complete.\n");
         }
     }
 }
 
 void wipe_batts(int confirm) {
     if (confirm) {
-        static char** title_headers = NULL;
+        char** title_headers = NULL;
 
         if (title_headers == NULL) {
             char* headers[] = { "Confirm wipe of battery stats?",
@@ -181,22 +193,22 @@ int wipe_menu_select(int chosen_item, void* data) {
 
 void show_wipe_menu()
 {
-    recovery_menu_item items[] = {
-                        {ITEM_WIPE_ALL,    "Wipe All"},
-                        {ITEM_WIPE_SYSTEM, "Wipe system"},
-                        {ITEM_WIPE_DATA,   "Wipe data"},
-                        {ITEM_WIPE_BOOT,   "Wipe boot"},
-                        {ITEM_WIPE_CACHE,  "Wipe cache"},
-                        {ITEM_WIPE_MISC,   "Wipe misc"},
-                        {ITEM_WIPE_BATT,   "Wipe battery stats"},
-                        NULL
-                    };
+    recovery_menu_item** items = (recovery_menu_item**)calloc(8, sizeof(recovery_menu_item*));
+    items[0] = create_menu_item(ITEM_WIPE_ALL,    "Wipe All");
+    items[1] = create_menu_item(ITEM_WIPE_SYSTEM, "Wipe system");
+    items[2] = create_menu_item(ITEM_WIPE_DATA,   "Wipe data");
+    items[3] = create_menu_item(ITEM_WIPE_BOOT,   "Wipe boot");
+    items[4] = create_menu_item(ITEM_WIPE_CACHE,  "Wipe cache");
+    items[5] = create_menu_item(ITEM_WIPE_MISC,   "Wipe misc");
+    items[6] = create_menu_item(ITEM_WIPE_BATT,   "Wipe battery stats");
+    items[7] = NULL;
 
     char* headers[] = { "Choose an item to wipe",
                         "or press DEL or POWER to return",
                         "USE CAUTION:",
                         "These operations *CANNOT BE UNDONE*",
                         "", NULL };
+
     recovery_menu* menu = create_menu(
             headers,
             items,

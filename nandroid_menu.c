@@ -197,7 +197,7 @@ static void nandroid_simple_restore()
 
 void nandroid_adv_r_choose_file(char* filename, char* path)
 {
-    static char* headers[] = { "Choose a backup prefix or press",
+    char* headers[] = { "Choose a backup prefix or press",
 			       "POWER or DEL to return",
 			       "",
 			       NULL };
@@ -440,10 +440,10 @@ void show_nandroid_adv_b_menu()
 
 void show_nandroid_menu()
 {
-    static char* headers[] = { "Select an option or press POWER to return",
+    char* headers[] = { "Select an option or press POWER to return",
 			       "",
 			       NULL };
-    static char* items[] = { "Simple Nandroid backup",
+    char* items[] = { "Simple Nandroid backup",
 			     "Simple Nandroid restore (latest)",
 			     "Advanced Nandroid backup",
 			     "Advanced Nandroid restore",

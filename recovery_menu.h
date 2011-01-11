@@ -78,12 +78,22 @@ typedef struct {
 /**
  * Creates a recovery menu object
  *
- * NOTE: ALL DATA WILL BE SERIALLY COPIED AND SUBSEQUENTLY DESTROYED WHEN destroy_menu() IS
- *       CALLED, WITH THE EXCEPTION OF THE data POINTER, WHICH IS LEFT UP TO YOU TO FREE AS
- *       IS APPROPRIATE
- * NOTE: headers AND items SHOULD BE NULL-TERMINATED LISTS
+ * \param headers A null-terminated list of headers
+ * \param items A null-terminated list of items
+ * \param data An optional data object to be passed throughout the callback sequence
+ * \param on_create onCreate callback
+ * \param on_create_items onCreateItems callback
+ * \param on_select onSelect callback
+ * \param on_destroy onDestroy callback
+ *
+ * \return A pointer to the recovery_menu structure.
+ *
+ * \note headers will be serially copied subsequently free()'d in
+ *       any later call to destroy_menu(), data will be accessed directly and should
+ *       be managed yourself, items will be accessed directly and consequently destroyed
+ *       when calling destroy_menu(), so do not free them yourself
  */
-recovery_menu* create_menu(char** headers, recovery_menu_item* items, void* data,
+recovery_menu* create_menu(char** headers, recovery_menu_item** items, void* data,
         menu_create_callback on_create, menu_create_items_callback on_create_items,
         menu_select_callback on_select, menu_destroy_callback on_destroy);
 

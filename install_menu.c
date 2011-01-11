@@ -36,13 +36,12 @@ void install_rom_from_tar(char* filename)
 
     int status = runve("/sbin/nandroid-mobile.sh",argv,envp,1);
     if(!WIFEXITED(status) || WEXITSTATUS(status)!=0) {
-        ui_printf_int("ERROR: install exited with status %d\n",WEXITSTATUS(status));
-        return WEXITSTATUS(status);
+        ui_printf_int("ERROR: install exited with status %d\n", WEXITSTATUS(status));
+        return;
     } else {
         ui_print("(done)\n");
     }
     ui_reset_progress();
-    return 0;
 }
 
 void install_update_zip(char* filename) {
@@ -61,7 +60,6 @@ void install_update_zip(char* filename) {
         ui_print("\nInstall from sdcard complete.\n");
         ui_print("\nThanks for using RZrecovery.\n");
     }
-    return;
 }
 
 void install_kernel_img(char* filename) {
@@ -81,7 +79,6 @@ void install_kernel_img(char* filename) {
 
     ui_print("\nKernel flash from sdcard complete.\n");
     ui_print("\nThanks for using RZrecovery.\n");
-    return 0;
 }
 
 void install_recovery_img(char* filename) {
@@ -101,19 +98,18 @@ void install_recovery_img(char* filename) {
 
     ui_print("\nRecovery flash from sdcard complete.\n");
     ui_print("\nThanks for using RZrecovery.\n");
-    return 0;
 }
 
-#define INSTALL_ITEM_TAR      0
-#define INSTALL_ITEM_ZIP      1
-#define INSTALL_ITEM_KERNEL   2
-#define INSTALL_ITEM_RECOVERY 3
+#define INSTALL_ITEM_TAR      1
+#define INSTALL_ITEM_ZIP      2
+#define INSTALL_ITEM_KERNEL   3
+#define INSTALL_ITEM_RECOVERY 4
 
 int install_menu_select(int chosen_item, void* data) {
-    static char* zip_exts[]      = { ".zip" };
-    static char* tar_exts[]      = { ".rom.tgz", ".rom.tar.gz", ".rom.tar" };
-    static char* kernel_exts[]   = { "boot.img" };
-    static char* recovery_exts[] = { "-rec.img", "_rec.img", ".rec.img" };
+    char* zip_exts[]      = { ".zip" };
+    char* tar_exts[]      = { ".rom.tgz", ".rom.tar.gz", ".rom.tar" };
+    char* kernel_exts[]   = { "boot.img" };
+    char* recovery_exts[] = { "-rec.img", "_rec.img", ".rec.img" };
 	switch(chosen_item) {
 	case INSTALL_ITEM_ZIP:
         display_file_select_menu("/sdcard", zip_exts, &install_update_zip);
@@ -134,22 +130,23 @@ int install_menu_select(int chosen_item, void* data) {
 
 void show_install_menu()
 {
+    recovery_menu_item** items = (recovery_menu_item**)calloc(5, sizeof(recovery_menu_item*));
+    items[0] = create_menu_item(INSTALL_ITEM_TAR,      "Install ROM tar from SD card");
+    items[1] = create_menu_item(INSTALL_ITEM_ZIP,      "Install update.zip from SD card");
+    items[2] = create_menu_item(INSTALL_ITEM_KERNEL,   "Install kernel img from /sdcard/kernels");
+    items[3] = create_menu_item(INSTALL_ITEM_RECOVERY, "Install recovery img from /sdcard/recovery");
+    items[4] = NULL;
+
     char* headers[] = { "Choose an install option or press",
                         "POWER to exit",
                         "", NULL };
-    recovery_menu_item items[] = {
-                { INSTALL_ITEM_TAR,      "Install ROM tar from SD card" },
-                { INSTALL_ITEM_ZIP,      "Install update.zip from SD card" },
-                { INSTALL_ITEM_KERNEL,   "Install kernel img from /sdcard/kernels" },
-                { INSTALL_ITEM_RECOVERY, "Install recovery img from /sdcard/recovery" },
-                NULL
-            };
+
     recovery_menu* menu = create_menu(
             headers,
             items,
             /* no data */ NULL,
             /* no on_create */ NULL,
-            /* no on_create_menu_items */ NULL,
+            /* no on_create_items */ NULL,
             &install_menu_select,
             /* no on_destroy */ NULL);
     display_menu(menu);

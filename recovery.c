@@ -418,30 +418,6 @@ copy_sideloaded_package(const char* original_path) {
 
 char**
 prepend_title(const char** headers) {
-
-    FILE* f = fopen("/recovery.version","r");
-    char* vers = calloc(8,sizeof(char));
-    fgets(vers, 8, f);
-
-    strtok(vers," "); // truncate vers to before the first space
-
-    char* patch_line_ptr = calloc((strlen(headers[0])+11),sizeof(char));
-    char* patch_line = patch_line_ptr;
-    strcpy(patch_line,headers[0]);
-    strcat(patch_line," (");
-    strcat(patch_line,vers);
-    strcat(patch_line,")");
-
-    int c = 0;
-    char ** p1;
-    for (p1 = headers; *p1; ++p1, ++c);
-
-    char** ver_headers = calloc((c+1),sizeof(char*));
-    ver_headers[0]=patch_line;
-    ver_headers[c]=NULL;
-    char** v = ver_headers+1;
-    for (p1 = headers+1; *p1; ++p1, ++v) *v = *p1;
-
     char* title[] = { "Android system recovery <"
 		      EXPAND(RECOVERY_API_VERSION) "e>",
                       "",
@@ -452,12 +428,11 @@ prepend_title(const char** headers) {
     int count = 0;
     char** p;
     for (p = title; *p; ++p, ++count);
-    for (p = ver_headers; *p; ++p, ++count);
-
+    for (p = headers; *p; ++p, ++count);
     char** new_headers = calloc((count+1),sizeof(char*));
     char** h = new_headers;
     for (p = title; *p; ++p, ++h) *h = *p;
-    for (p = ver_headers; *p; ++p, ++h)	*h = *p;
+    for (p = headers; *p; ++p, ++h) *h = *p;
     *h = NULL;
 
     return new_headers;
