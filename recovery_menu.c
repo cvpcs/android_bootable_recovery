@@ -154,14 +154,9 @@ recovery_menu* create_menu(char** headers, recovery_menu_item** items, void* dat
     // good old iterator
     int i;
 
-ui_print("D:counting headers: ");
     int ch = count_strlist_items(headers);
-ui_print("found %d\n", ch);
-ui_print("D:creating headers\n");
     menu->headers = (char**)calloc(ch + 1, sizeof(char*));
-ui_print("D:copying headers\n");
     for(i = 0; i < ch; ++i) { menu->headers[i] = strdup(headers[i]); }
-ui_print("D:null-terminating headers\n");
     menu->headers[i] = NULL;
 
     menu->items = items;
@@ -243,7 +238,13 @@ void display_menu(recovery_menu* menu)
         chosen_item = get_menu_selection(headers, items, 1,
                 (chosen_item < 0 ? 0 : chosen_item));
 
-        int item_id = menu_items[chosen_item]->id;
+        // default to setting our id to the selection
+        int item_id = chosen_item;
+
+        // translate the id if it was a menu selection
+        if(chosen_item >= 0 && chosen_item < count) {
+            item_id = menu_items[chosen_item]->id;
+        }
 
         free(items);
 
@@ -438,15 +439,24 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
     fsm->files = file_items;
 
     // create our menu items
-    recovery_menu_item** items = (recovery_menu_item**)calloc(dcount + fcount + 1, sizeof(recovery_menu_item*));
-    i = 0;
-    for(j = 0; j < dcount; ++i, ++j) {
-        items[i] = create_menu_item(fsm->dirs[j]->id, fsm->dirs[j]->name);
+    recovery_menu_item** items;
+
+    if(dcount + fcount > 0) {
+        items = (recovery_menu_item**)calloc(dcount + fcount + 1, sizeof(recovery_menu_item*));
+        i = 0;
+        for(j = 0; j < dcount; ++i, ++j) {
+            items[i] = create_menu_item(fsm->dirs[j]->id, fsm->dirs[j]->name);
+        }
+        for(k = 0; k < fcount; ++i, ++k) {
+            items[i] = create_menu_item(fsm->files[k]->id, fsm->files[k]->name);
+        }
+        items[i] = NULL;
+    } else {
+        // we need to display a "no files found" here
+        items = (recovery_menu_item**)calloc(2, sizeof(recovery_menu_item*));
+        items[0] = create_menu_item(NO_ACTION, " ---- No files found in this directory ----");
+        items[1] = NULL;
     }
-    for(k = 0; k < fcount; ++i, ++j) {
-        items[i] = create_menu_item(fsm->files[k]->id, fsm->files[k]->name);
-    }
-    items[i] = NULL;
 
     return items;
 }
@@ -460,7 +470,7 @@ int file_select_menu_select(int chosen_item, void* data) {
         // only report back if cur_path == base_path
         if(strcmp(fsm->base_path, fsm->cur_path) != 0) {
             // we need to reset our current path
-            char* new_path = strdup(dirname(fsm->cur_path));
+            char* new_path = strdup(dirname(strdup(fsm->cur_path)));
             free(fsm->cur_path);
             fsm->cur_path = new_path;
             return NO_ACTION;

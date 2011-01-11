@@ -106,10 +106,10 @@ void install_recovery_img(char* filename) {
 #define INSTALL_ITEM_RECOVERY 4
 
 int install_menu_select(int chosen_item, void* data) {
-    char* zip_exts[]      = { ".zip" };
-    char* tar_exts[]      = { ".rom.tgz", ".rom.tar.gz", ".rom.tar" };
-    char* kernel_exts[]   = { "boot.img" };
-    char* recovery_exts[] = { "-rec.img", "_rec.img", ".rec.img" };
+    char* zip_exts[]      = { ".zip", NULL };
+    char* tar_exts[]      = { ".rom.tgz", ".rom.tar.gz", ".rom.tar", NULL };
+    char* kernel_exts[]   = { "boot.img", NULL };
+    char* recovery_exts[] = { "-rec.img", "_rec.img", ".rec.img", NULL };
 	switch(chosen_item) {
 	case INSTALL_ITEM_ZIP:
         display_file_select_menu("/sdcard", zip_exts, &install_update_zip);
