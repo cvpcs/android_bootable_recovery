@@ -38,6 +38,7 @@ endif
 
 LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UPDATER_LIBS) $(TARGET_RECOVERY_UPDATER_EXTRA_LIBS)
 LOCAL_STATIC_LIBRARIES += libapplypatch libedify libflashutils libmtdutils libmmcutils libbmlutils libminzip libz
+LOCAL_STATIC_LIBRARIES += libe2fsck libtune2fs libmke2fs libext2fs libext2_blkid libext2_uuid libext2_profile libext2_com_err libext2_e2p
 LOCAL_STATIC_LIBRARIES += libmincrypt libbz
 LOCAL_STATIC_LIBRARIES += libcutils libstdc++ libc
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/..

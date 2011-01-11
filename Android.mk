@@ -69,6 +69,7 @@ ifeq ($(USE_INTERNAL_EXT4UTILS),true)
 else
     LOCAL_STATIC_LIBRARIES += libext4_utils
 endif
+LOCAL_STATIC_LIBRARIES += libe2fsck libtune2fs libmke2fs libext2fs libext2_blkid libext2_uuid libext2_profile libext2_com_err libext2_e2p
 LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex
 LOCAL_STATIC_LIBRARIES += libflash_image libdump_image liberase_image
 LOCAL_STATIC_LIBRARIES += libminzip libunz libflashutils libmtdutils libmmcutils libbmlutils libmincrypt
@@ -84,7 +85,7 @@ endif
 include $(BUILD_EXECUTABLE)
 
 # make some recovery symlinks
-RECOVERY_LINKS := busybox flash_image dump_image erase_image
+RECOVERY_LINKS := busybox e2fsck flash_image dump_image erase_image mke2fs tune2fs
 RECOVERY_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(RECOVERY_LINKS))
 $(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)
 $(RECOVERY_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
@@ -96,7 +97,7 @@ ALL_DEFAULT_INSTALLED_MODULES += $(RECOVERY_SYMLINKS)
 
 # Now let's do busybox symlinks
 BUSYBOX_LINKS := $(shell cat external/busybox/busybox-minimal.links)
-RECOVERY_BUSYBOX_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(filter-out $(exclude),$(notdir $(BUSYBOX_LINKS))))
+RECOVERY_BUSYBOX_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(filter-out $(RECOVERY_LINKS),$(notdir $(BUSYBOX_LINKS))))
 $(RECOVERY_BUSYBOX_SYMLINKS): BUSYBOX_BINARY := busybox
 $(RECOVERY_BUSYBOX_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
 	@echo "Symlink: $@ -> $(BUSYBOX_BINARY)"

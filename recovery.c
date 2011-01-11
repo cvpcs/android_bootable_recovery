@@ -680,6 +680,12 @@ main(int argc, char **argv) {
             return erase_image_main(argc, argv);
         } else if(strstr(argv[0], "dump_image") != NULL) {
             return dump_image_main(argc, argv);
+        } else if(strstr(argv[0], "e2fsck") != NULL) {
+            return e2fsck_main(argc, argv);
+        } else if(strstr(argv[0], "mke2fs") != NULL) {
+            return mke2fs_main(argc, argv);
+        } else if(strstr(argv[0], "tune2fs") != NULL) {
+            return tune2fs_main(argc, argv);
         } else {
             return busybox_driver(argc, argv);
         }
