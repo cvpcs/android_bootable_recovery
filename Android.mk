@@ -34,10 +34,11 @@ LOCAL_MODULE := recovery
 
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 
+# determine our API version based on whether we're in froyo
 ifeq ($(PLATFORM_SDK_VERSION),8)
-	RECOVERY_API_VERSION := 2
+RECOVERY_API_VERSION := 2
 else
-	RECOVERY_API_VERSION := 3
+RECOVERY_API_VERSION := 3
 endif
 LOCAL_CFLAGS += -DRECOVERY_API_VERSION=$(RECOVERY_API_VERSION)
 
@@ -126,7 +127,8 @@ include $(commands_recovery_local_path)/mmcutils/Android.mk
 include $(commands_recovery_local_path)/bmlutils/Android.mk
 include $(commands_recovery_local_path)/tools/Android.mk
 include $(commands_recovery_local_path)/edify/Android.mk
-include $(commands_recovery_local_path)/updater/Android.mk
+include $(commands_recovery_local_path)/updater2/Android.mk
+include $(commands_recovery_local_path)/updater3/Android.mk
 include $(commands_recovery_local_path)/applypatch/Android.mk
 commands_recovery_local_path :=
 

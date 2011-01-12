@@ -78,7 +78,12 @@ $(inc) : $(inc).list
 $(call intermediates-dir-for,EXECUTABLES,updater)/updater.o : $(inc)
 LOCAL_C_INCLUDES += $(dir $(inc))
 
+# if building on froyo, use this as our secondary updater
+ifeq ($(PLATFORM_SDK_VERSION), 8)
+LOCAL_MODULE := updater3
+else
 LOCAL_MODULE := updater
+endif
 
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 
