@@ -312,8 +312,8 @@ file_select_menu_item* create_file_select_menu_item(int id, char* name, char* ba
 
 int compare_file_select_menu_items(const void* a, const void* b) {
     return strcmp(
-                ((file_select_menu_item*)a)->name,
-                ((file_select_menu_item*)b)->name
+                (*((file_select_menu_item**)a))->name,
+                (*((file_select_menu_item**)b))->name
                 );
 }
 
@@ -446,10 +446,10 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
 
     // sort the items, respectively
     if(dcount > 0) {
-        qsort(dir_items[0], dcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
+        qsort(&dir_items[0], dcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
     }
     if(fcount > 0) {
-        qsort(file_items[0], fcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
+        qsort(&file_items[0], fcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
     }
 
     fsm->dirs = dir_items;
