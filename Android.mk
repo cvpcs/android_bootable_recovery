@@ -21,6 +21,7 @@ LOCAL_SRC_FILES := \
     mounts.c \
     ui.c \
     verifier.c \
+    nandroid.c \
     encryptedfs_provisioning.c
 
 # add our menus

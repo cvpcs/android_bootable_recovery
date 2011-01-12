@@ -13,7 +13,7 @@
 #include "roots.h"
 #include "nandroid_menu.h"
 
-void nandroid_backup(char* subname, char partitions)
+void nandroid_backup_menu(char* subname, char partitions)
 {
     ui_print("Attempting Nandroid backup.\n");
     
@@ -81,7 +81,7 @@ void nandroid_backup(char* subname, char partitions)
     ui_reset_progress();
 }
 
-void nandroid_restore(char* subname, char partitions)
+void nandroid_restore_menu(char* subname, char partitions)
 {
     int boot  = partitions&BOOT;
     int cache = partitions&CACHE;
@@ -347,7 +347,7 @@ void show_nandroid_adv_r_menu()
 	    break;
 	case ITEM_PERF:
 	    ui_print("Restoring...\n");
-	    nandroid_restore(filename,partitions|PROGRESS);
+	    nandroid_restore_menu(filename,partitions|PROGRESS);
 	    break;
 	case ITEM_B:
 	    partitions^=BOOT;
@@ -414,7 +414,7 @@ void show_nandroid_adv_b_menu()
 	    headers[2]=filename;
 	    break;
 	case ITEM_PERF:
-	    nandroid_backup(filename,partitions|PROGRESS);
+	    nandroid_backup_menu(filename,partitions|PROGRESS);
 	    break;
 	case ITEM_B:
 	    partitions^=BOOT;

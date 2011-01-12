@@ -11,7 +11,7 @@
 
 #define BSD      0x25
 
-void nandroid_backup(char* subname, char partitions);
+void nandroid_backup_menu(char* subname, char partitions);
 
 void show_nandroid_menu();
 
