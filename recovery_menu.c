@@ -23,21 +23,21 @@
 
 void prompt_and_wait()
 {
-    char* menu_headers[] = { "Modded by raidzero",
+    char* menu_headers[] = { "Modded by raidzero & cvpcs",
 			     "",
 			     NULL };
 
     char** headers = prepend_title(menu_headers);
 
     char* items[] = { "Reboot into Android",
-		      "Reboot into Recovery",
-              "Shutdown system",
-		      "Wipe partitions",
-		      "Mount options",
-		      "Backup/restore",
-		      "Install",
-		      "Help",
-		      NULL };
+                      "Reboot into Recovery",
+                      "Shutdown system",
+                      "Wipe partitions",
+                      "Mount options",
+                      "Backup/restore",
+                      "Install",
+                      "Help",
+                      NULL };
 
 
     char* argv[]={"/sbin/test_menu.sh",NULL};
