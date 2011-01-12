@@ -657,7 +657,7 @@ void wipe_data(int confirm) {
     ui_print("\n-- Wiping data...\n");
     device_wipe_data();
     erase_volume("/data");
-    if (has_datadata()) {
+    if (has_volume("/datadata")) {
         erase_volume("/datadata");
     }
     erase_volume("/cache");

@@ -188,7 +188,7 @@ int runve(char* filename, char** argv, char** envp, int secs)
     return status;
 }
 
-int has_datadata() {
-    Volume *vol = volume_for_path("/datadata");
+int has_volume(const char *path) {
+    Volume *vol = volume_for_path(path);
     return vol != NULL;
 }

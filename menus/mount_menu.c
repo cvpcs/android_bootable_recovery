@@ -8,60 +8,25 @@
 #include "recovery_ui.h"
 #include "recovery_menu.h"
 
-typedef struct {
-    char* name;
-    char* path;
-} mount_info;
-
-#define MOUNT_PARTITION_SYSTEM 0
-#define MOUNT_PARTITION_DATA   1
-#define MOUNT_PARTITION_CACHE  2
-#define MOUNT_PARTITION_SDCARD 3
-
-int count_mount_partitions(mount_info* partitions) {
-    int count = 0;
-    mount_info* p;
-    for(p = partitions; p->name; ++p, ++count);
-    return count;
-}
-
-mount_info* get_mount_partitions() {
-    // create our list defaulting to not being mounted
-    static mount_info mount_partitions[] = {
-        { "System",  "/system" },
-        { "Data",    "/data" },
-        { "Cache",   "/cache" },
-        { "SD Card", "/sdcard" },
-        { NULL, NULL }
-    };
-
-    return mount_partitions;
-}
-
 void toggle_mount_partition(int which) {
-    // get our updated partition list
-    mount_info* partitions = get_mount_partitions();
-
-    // get a count of how many partitions we have
-    int count = count_mount_partitions(partitions);
-
-    // bail out if our selection is invalid
-    if(which < 0 || which >= count) {
+    if(which < 0 || which >= device_partition_num || // make sure it's a partition
+            device_partitions[which].id != which || // make sure our "which" is pointing correctly
+            (device_partitions[which].flags & PARTITION_FLAG_MOUNTABLE) == 0 || // make sure we're wipeable
+            !has_volume(device_partitions[which].path)) { // make sure we exist
+        // not valid
+        LOGE("Invalid device specified in (un)mount");
         return;
     }
 
-    // ok, we have a valid selection, so toggle it
-    mount_info mount = partitions[which];
-    if(is_path_mounted(mount.path)) {
-		ensure_path_unmounted(mount.path);
-		ui_print("Unm");
+    const char* mount_format = "Mounted %s\n";
+    const char* unmount_format = "Unmounted %s\n";
+    if(is_path_mounted(device_partitions[which].path)) {
+		ensure_path_unmounted(device_partitions[which].path);
+        ui_print(unmount_format, device_partitions[which].name);
 	} else {
-		ensure_path_mounted(mount.path);
-		ui_print("M");
+		ensure_path_mounted(device_partitions[which].path);
+        ui_print(mount_format, device_partitions[which].name);
     }
-    ui_print("ounted ");
-    ui_print(mount.name);
-    ui_print("\n");
 }
 
 int is_usb_storage_enabled()
@@ -106,67 +71,63 @@ void disable_usb_mass_storage()
     }
 }
 
-// we set our item ids equal to the mount ids, so we can create our menu dynamically
-#define ITEM_MOUNT_SYSTEM MOUNT_PARTITION_SYSTEM
-#define ITEM_MOUNT_DATA   MOUNT_PARTITION_DATA
-#define ITEM_MOUNT_CACHE  MOUNT_PARTITION_CACHE
-#define ITEM_MOUNT_SDCARD MOUNT_PARTITION_SDCARD
-#define ITEM_ENABLE_USB   1000 // we make this large so we know it won't interfere with the others
+#define ITEM_ENABLE_USB (PARTITION_LAST + 1)
 
 recovery_menu_item** mount_menu_create_items(void* data) {
-    // get our updated partition list
-    mount_info* partitions = get_mount_partitions();
+    int i;
+    int count = 0;
+    for(i = 0; i < device_partition_num; ++i) {
+        if((device_partitions[i].flags & PARTITION_FLAG_MOUNTABLE) > 0 &&
+                has_volume(device_partitions[i].path)) {
+            count++;
+        }
+    }
 
-    // get a count of how many partitions we have
-    int count = count_mount_partitions(partitions);
-
-    // build our item list (#mounts plus 2 for USB and NULL)
     recovery_menu_item** items = (recovery_menu_item**)calloc(count + 2, sizeof(recovery_menu_item*));
 
-    // fill the beginning of the array with mount options
-    int i;
-    char* buf;
-    for(i = 0; i < count; ++i) {
-        buf = (char*)calloc(9 + strlen(partitions[i].name), sizeof(char));
-        if(is_path_mounted(partitions[i].path)) {
-            strcpy(buf, "Unm");
-        } else {
-            strcpy(buf, "M");
+    // add Wipe All
+    int j = 0;
+
+    // add the valid devices
+    const char* mount_menu_format = "Mount %s";
+    const char* unmount_menu_format = "Unmount %s";
+    for(i = 0; i < device_partition_num; ++i) {
+        if((device_partitions[i].flags & PARTITION_FLAG_MOUNTABLE) > 0 &&
+                has_volume(device_partitions[i].path)) {
+            if(is_path_mounted(device_partitions[i].path)) {
+                int buflen = strlen(device_partitions[i].name) + strlen(unmount_menu_format);
+                char* buf = (char*)calloc(buflen, sizeof(char));
+                snprintf(buf, buflen, unmount_menu_format, device_partitions[i].name);
+                items[j++] = create_menu_item(device_partitions[i].id, buf);
+                free(buf);
+            } else {
+                int buflen = strlen(device_partitions[i].name) + strlen(mount_menu_format);
+                char* buf = (char*)calloc(buflen, sizeof(char));
+                snprintf(buf, buflen, mount_menu_format, device_partitions[i].name);
+                items[j++] = create_menu_item(device_partitions[i].id, buf);
+                free(buf);
+            }
         }
-        strcat(buf, "ount ");
-        strcat(buf, partitions[i].name);
-        items[i] = create_menu_item(i, buf);
-        free(buf);
     }
-    // add usb storage
-    buf = (char*)calloc(25, sizeof(char));
     if(is_usb_storage_enabled()) {
-        strcpy(buf, "Dis");
+        items[j++] = create_menu_item(ITEM_ENABLE_USB, "Disable USB mass storage");
     } else {
-        strcpy(buf, "En");
+        items[j++] = create_menu_item(ITEM_ENABLE_USB, "Enable USB mass storage");
     }
-    strcat(buf, "able USB Mass Storage");
-    items[i++] = create_menu_item(ITEM_ENABLE_USB, buf);
-    free(buf);
-    items[i++] = NULL;
+    items[j] = NULL;
 
     return items;
 }
 
 int mount_menu_select(int chosen_item, void* data) {
-    switch (chosen_item) {
-    case ITEM_ENABLE_USB:
+    if(chosen_item == ITEM_ENABLE_USB) {
 	    if(is_usb_storage_enabled()) {
             disable_usb_mass_storage();
 	    } else {
             enable_usb_mass_storage();
 	    }
-        break;
-    default:
-        // we default to mounting something, because even if it's invalid it will just
-        // bail out
+    } else if(chosen_item < device_partition_num) {
         toggle_mount_partition(chosen_item);
-        break;
     }
 
     return chosen_item;

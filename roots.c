@@ -31,6 +31,20 @@
 static int num_volumes = 0;
 static Volume* device_volumes = NULL;
 
+const PartitionInfo device_partitions[] = {
+        {PARTITION_BOOT,       "/boot",       "Boot",                                  PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_SYSTEM,     "/system",     "System",     PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_DATA,       "/data",       "Data",       PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_DATADATA,   "/datadata",   "Datadata",                              PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_CACHE,      "/cache",      "Cache",      PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_SDCARD,     "/sdcard",     "SDCard",     PARTITION_FLAG_MOUNTABLE                                                                                 },
+        {PARTITION_MISC,       "/misc",       "Misc",                                                            PARTITION_FLAG_SAVEABLE                             },
+        {PARTITION_RECOVERY,   "/recovery",   "Recovery",                                                        PARTITION_FLAG_SAVEABLE                             },
+        {PARTITION_WIMAX,      "/wimax",      "Wimax",                                                           PARTITION_FLAG_SAVEABLE                             },
+        {PARTITION_PREINSTALL, "/preinstall", "Preinstall", PARTITION_FLAG_MOUNTABLE |                           PARTITION_FLAG_SAVEABLE                             },
+    };
+const int device_partition_num = sizeof(device_partitions)/sizeof(device_partitions[0]);
+
 void load_volume_table() {
     int alloc = 2;
     device_volumes = malloc(alloc * sizeof(Volume));

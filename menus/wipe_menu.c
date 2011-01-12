@@ -1,36 +1,27 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "common.h"
 #include "recovery_lib.h"
 #include "roots.h"
 #include "recovery_ui.h"
 #include "recovery_menu.h"
 
-typedef struct {
-    const char* name;
-    const char* path;
-} wipe_info;
-
-#define WIPE_PARTITION_SYSTEM 0
-#define WIPE_PARTITION_DATA   1
-#define WIPE_PARTITION_BOOT   2
-#define WIPE_PARTITION_CACHE  3
-#define WIPE_PARTITION_MISC   4
-
 void wipe_partition(int which, int confirm) {
-    static wipe_info wipe_partitions[] = {
-        { "System", "/system" },
-        { "Data", "/data" },
-        { "Boot", "/boot" },
-        { "Cache", "/cache" },
-        { "Misc", "/misc" }
-    };
-    static int num_partitions = sizeof(wipe_partitions) / sizeof(wipe_partitions[0]);
-
-    // bail out if which is too big
-    if (which >= num_partitions) {
-        return;
+    if(which >= 0) {
+        if(which >= device_partition_num || // make sure it's a partition
+                device_partitions[which].id != which || // make sure our "which" is pointing correctly
+                (device_partitions[which].flags & PARTITION_FLAG_WIPEABLE) == 0 || // make sure we're wipeable
+                !has_volume(device_partitions[which].path)) { // make sure we exist
+            // not valid
+            LOGE("Invalid device specified in wipe");
+            return;
+        }
     }
+
+ui_print("Planning on wiping %s", device_partitions[which].path);
+
+    // we should be good to go now
 
     if (confirm) {
         char** title_headers = NULL;
@@ -39,23 +30,15 @@ void wipe_partition(int which, int confirm) {
         char* confirm_select;
 
         // if we have a specific one, then use it
-        const char* confirm_prefix = "Confirm wipe of ";
-        const char* confirm_suffix = "?";
-        const char* confirm_select_prefix = " Yes -- wipe ";
+        const char* confirm_format = "Confirm wipe of %s?";
+        const char* confirm_select_format = " Yes -- wipe %s";
         if(which >= 0) {
-            confirm = (char*)calloc(
-                    strlen(confirm_prefix) +
-                    strlen(wipe_partitions[which].name) +
-                    strlen(confirm_suffix) + 1, sizeof(char));
-            strcpy(confirm, confirm_prefix);
-            strcat(confirm, wipe_partitions[which].name);
-            strcat(confirm, confirm_suffix);
-
-            confirm_select = (char*)calloc(
-                    strlen(confirm_select_prefix) +
-                    strlen(wipe_partitions[which].name) + 1, sizeof(char));
-            strcpy(confirm_select, confirm_select_prefix);
-            strcat(confirm_select, wipe_partitions[which].name);
+            int clen  = strlen(device_partitions[which].name) + strlen(confirm_format);
+            int cslen = strlen(device_partitions[which].name) + strlen(confirm_select_format);
+            confirm        = (char*)calloc(clen,  sizeof(char));
+            confirm_select = (char*)calloc(cslen, sizeof(char));
+            snprintf(confirm,        clen,  confirm_format,        device_partitions[which].name);
+            snprintf(confirm_select, cslen, confirm_select_format, device_partitions[which].name);
         } else {
             // we are wiping all
             confirm = strdup("Confirm wipe of EVERYTHING?");
@@ -90,30 +73,30 @@ void wipe_partition(int which, int confirm) {
         }
     }
 
+    const char* wiping_format = "---- Wiping %s ----\n";
+    const char* wiping_complete = "     complete\n";
+
     if(which >= 0) {
-        ui_print("-- Wiping ");
-        ui_print(wipe_partitions[which].name);
-        ui_print("... ");
-        erase_volume(wipe_partitions[which].path);
-        ui_print(" complete.\n");
-        if(which == WIPE_PARTITION_DATA && has_datadata()) {
-            ui_print("-- Wiping Datadata ... ");
-            erase_volume("/datadata");
-            ui_print(" complete.\n");
+        ui_print(wiping_format, device_partitions[which].name);
+        erase_volume(device_partitions[which].path);
+        ui_print("     complete\n");
+        if(device_partitions[which].id == PARTITION_DATA && // if on data
+                device_partitions[PARTITION_DATADATA].id == PARTITION_DATADATA && // sanity check
+                (device_partitions[PARTITION_DATADATA].flags & PARTITION_FLAG_WIPEABLE) > 0 && // make sure it's wipeable
+                has_volume(device_partitions[PARTITION_DATADATA].path)) { // datadata exists
+            ui_print(wiping_format, device_partitions[PARTITION_DATADATA].name);
+            erase_volume(device_partitions[PARTITION_DATADATA].path);
+            ui_print(wiping_complete);
         }
     } else {
         int i;
-        for(i = 0; i < num_partitions; ++i) {
-            ui_print("-- Wiping ");
-            ui_print(wipe_partitions[i].name);
-            ui_print("... ");
-            erase_volume(wipe_partitions[i].path);
-            ui_print("complete.\n");
-        }
-        if(has_datadata()) {
-            ui_print("-- Wiping Datadata ... ");
-            erase_volume("/datadata");
-            ui_print(" complete.\n");
+        for(i = 0; i < device_partition_num; ++i) {
+            if((device_partitions[i].flags & PARTITION_FLAG_WIPEABLE) > 0 &&
+                    has_volume(device_partitions[i].path)) {
+            ui_print(wiping_format, device_partitions[i].name);
+            erase_volume(device_partitions[i].path);
+            ui_print("     complete\n");
+            } 
         }
     }
 }
@@ -155,37 +138,17 @@ void wipe_batts(int confirm) {
     ui_print("\n Battery Statistics cleared.\n");
 }
 
-#define ITEM_WIPE_ALL    1
-#define ITEM_WIPE_SYSTEM 2
-#define ITEM_WIPE_DATA   3
-#define ITEM_WIPE_BOOT   4
-#define ITEM_WIPE_CACHE  5
-#define ITEM_WIPE_MISC   6
-#define ITEM_WIPE_BATT   7
+#define ITEM_WIPE_ALL  (PARTITION_LAST + 1)
+#define ITEM_WIPE_BATT (PARTITION_LAST + 2)
 
 int wipe_menu_select(int chosen_item, void* data) {
-    switch (chosen_item) {
-    case ITEM_WIPE_ALL:
+    if(chosen_item == ITEM_WIPE_ALL) {
         wipe_partition(-1, ui_text_visible());
-        break;
-    case ITEM_WIPE_SYSTEM:
-        wipe_partition(WIPE_PARTITION_SYSTEM, ui_text_visible());
-        break;
-    case ITEM_WIPE_DATA:
-        wipe_partition(WIPE_PARTITION_DATA, ui_text_visible());
-        break;
-    case ITEM_WIPE_BOOT:
-        wipe_partition(WIPE_PARTITION_BOOT, ui_text_visible());
-        break;
-    case ITEM_WIPE_CACHE:
-        wipe_partition(WIPE_PARTITION_CACHE, ui_text_visible());
-        break;
-    case ITEM_WIPE_MISC:
-        wipe_partition(WIPE_PARTITION_MISC, ui_text_visible());
-        break;
-    case ITEM_WIPE_BATT:
+    } else if(chosen_item == ITEM_WIPE_BATT) {
         wipe_batts(ui_text_visible());
-        break;
+    } else if(chosen_item < device_partition_num) {
+        // we try to wipe our chosen item, which should be a partition id
+        wipe_partition(chosen_item, ui_text_visible());
     }
 
     return chosen_item;
@@ -193,15 +156,43 @@ int wipe_menu_select(int chosen_item, void* data) {
 
 void show_wipe_menu()
 {
-    recovery_menu_item** items = (recovery_menu_item**)calloc(8, sizeof(recovery_menu_item*));
-    items[0] = create_menu_item(ITEM_WIPE_ALL,    "Wipe All");
-    items[1] = create_menu_item(ITEM_WIPE_SYSTEM, "Wipe system");
-    items[2] = create_menu_item(ITEM_WIPE_DATA,   "Wipe data");
-    items[3] = create_menu_item(ITEM_WIPE_BOOT,   "Wipe boot");
-    items[4] = create_menu_item(ITEM_WIPE_CACHE,  "Wipe cache");
-    items[5] = create_menu_item(ITEM_WIPE_MISC,   "Wipe misc");
-    items[6] = create_menu_item(ITEM_WIPE_BATT,   "Wipe battery stats");
-    items[7] = NULL;
+    int i;
+    int count = 0;
+    for(i = 0; i < device_partition_num; ++i) {
+        // silently ignore datadata, it will get wiped with DATA if it exists
+        if(device_partitions[i].id == PARTITION_DATADATA)
+            continue;
+
+        if((device_partitions[i].flags & PARTITION_FLAG_WIPEABLE) > 0 &&
+                has_volume(device_partitions[i].path)) {
+            count++;
+        }
+    }
+
+    recovery_menu_item** items = (recovery_menu_item**)calloc(count + 3, sizeof(recovery_menu_item*));
+
+    // add Wipe All
+    int j = 0;
+    items[j++] = create_menu_item(ITEM_WIPE_ALL, "Wipe All");
+
+    // add the valid devices
+    const char* wipe_menu_format = "Wipe %s";
+    for(i = 0; i < device_partition_num; ++i) {
+        // silently ignore datadata, it will get wiped with DATA if it exists
+        if(device_partitions[i].id == PARTITION_DATADATA)
+            continue;
+
+        if((device_partitions[i].flags & PARTITION_FLAG_WIPEABLE) > 0 &&
+                has_volume(device_partitions[i].path)) {
+            int buflen = strlen(device_partitions[i].name) + strlen(wipe_menu_format);
+            char* buf = (char*)calloc(buflen, sizeof(char));
+            snprintf(buf, buflen, wipe_menu_format, device_partitions[i].name);
+            items[j++] = create_menu_item(device_partitions[i].id, buf);
+            free(buf);
+        }
+    }
+    items[j++] = create_menu_item(ITEM_WIPE_BATT, "Wipe battery stats");
+    items[j] = NULL;
 
     char* headers[] = { "Choose an item to wipe",
                         "or press DEL or POWER to return",
