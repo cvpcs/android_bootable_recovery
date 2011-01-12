@@ -144,6 +144,8 @@ int ensure_path_mounted(const char* path) {
         }
         return mtd_mount_partition(partition, v->mount_point, v->fs_type, 0);
     } else if (strcmp(v->fs_type, "ext4") == 0 ||
+               strcmp(v->fs_type, "ext3") == 0 ||
+               strcmp(v->fs_type, "ext2") == 0 ||
                strcmp(v->fs_type, "vfat") == 0) {
         result = mount(v->device, v->mount_point, v->fs_type,
                        MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
@@ -241,7 +243,25 @@ int format_volume(const char* volume) {
         reset_ext4fs_info();
         int result = make_ext4fs(v->device, NULL, NULL, 0, 0, 0);
         if (result != 0) {
-            LOGE("format_volume: make_extf4fs failed on %s\n", v->device);
+            LOGE("format_volume: make_ext4fs failed on %s\n", v->device);
+            return -1;
+        }
+        return 0;
+    }
+
+    if (strcmp(v->fs_type, "ext3") == 0) {
+        int result = format_ext3_device(v->device);
+        if (result != 0) {
+            LOGE("format_volume: format_ext3_device failed on %s\n", v->device);
+            return -1;
+        }
+        return 0;
+    }
+
+    if (strcmp(v->fs_type, "ext2") == 0) {
+        int result = format_ext2_device(v->device);
+        if (result != 0) {
+            LOGE("format_volume: format_ext2_device failed on %s\n", v->device);
             return -1;
         }
         return 0;
