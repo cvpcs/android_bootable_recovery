@@ -17,11 +17,6 @@
 
 void install_rom_from_tar(char* filename)
 {
-    if (ui_key_pressed(KEY_SPACE)) {
-        ui_print("Backing up before installing...\n");
-        nandroid_backup("preinstall",BSD|PROGRESS);
-    }
-
     ui_print("Attempting to install ROM from ");
     ui_print(filename);
     ui_print("...\n");
