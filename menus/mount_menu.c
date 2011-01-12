@@ -24,6 +24,13 @@ void toggle_mount_partition(int which) {
 		ensure_path_unmounted(device_partitions[which].path);
         ui_print(unmount_format, device_partitions[which].name);
 	} else {
+        // if mounting the sd card, we need to make sure it's disabled
+        if(which == PARTITION_SDCARD &&
+                is_usb_storage_enabled()) {
+            // disable mass storage before unmounting
+            disable_usb_mass_storage();
+        }
+
 		ensure_path_mounted(device_partitions[which].path);
         ui_print(mount_format, device_partitions[which].name);
     }
@@ -32,25 +39,47 @@ void toggle_mount_partition(int which) {
 int is_usb_storage_enabled()
 {
     FILE* fp = fopen("/sys/devices/platform/usb_mass_storage/lun0/file","r");
+    if(fp == NULL) {
+        return 0;
+    }
+
     char* buf = malloc(11*sizeof(char));
+
     fgets(buf, 11, fp);
     fclose(fp);
 
-    if(strcmp(buf,"/dev/block")==0) {
-        return(1);
-    } else {
-        return(0);
-    }
+    int ret = (strcmp(buf,"/dev/block") == 0);
+
+    free(buf);
+
+    return ret;
 }
 
 void enable_usb_mass_storage()
 {
-    ensure_path_unmounted("/sdcard");
+    // get our SDCard volume
+    Volume* v = volume_for_path(device_partitions[PARTITION_SDCARD].path);
+    if(v == NULL) {
+        LOGE("Unable to locate %s volume\n", device_partitions[PARTITION_SDCARD].name);
+        return;
+    }
+
+    // unmount the volume
+    ensure_path_unmounted(v->mount_point);
+
+    // open the LUN file
     FILE* fp = fopen("/sys/devices/platform/usb_mass_storage/lun0/file","w");
     if(fp != NULL) {
         ui_print("Enabling USB mass storage ... ");
-        const char* sdcard_partition = "/dev/block/mmcblk0\n";
-        fprintf(fp,sdcard_partition);
+
+        // since usb devices usually consider device to be the first partition of the device,
+        // and device2 to be the whole device, first attempt device2, and then device if 2 is null
+        if(v->device2) {
+            fprintf(fp, v->device2);
+        } else {
+            fprintf(fp, v->device);
+        }
+
         fclose(fp);
         ui_print("complete\n");
     } else {
