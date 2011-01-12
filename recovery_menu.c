@@ -310,6 +310,13 @@ file_select_menu_item* create_file_select_menu_item(int id, char* name, char* ba
     return item;
 }
 
+int compare_file_select_menu_items(const void* a, const void* b) {
+    return strcmp(
+                ((file_select_menu_item*)a)->name,
+                ((file_select_menu_item*)b)->name
+                );
+}
+
 void destroy_file_select_menu_item(file_select_menu_item* item) {
     if(item) {
         free(item->name);
@@ -436,6 +443,15 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
     // reset our items in the data structure
     destroy_file_select_menu_item_list(fsm->files);
     destroy_file_select_menu_item_list(fsm->dirs);
+
+    // sort the items, respectively
+    if(dcount > 0) {
+        qsort(dir_items[0], dcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
+    }
+    if(fcount > 0) {
+        qsort(file_items[0], fcount, sizeof(file_select_menu_item*), compare_file_select_menu_items);
+    }
+
     fsm->dirs = dir_items;
     fsm->files = file_items;
 
@@ -445,11 +461,11 @@ recovery_menu_item** file_select_menu_create_items(void* data) {
     if(dcount + fcount > 0) {
         items = (recovery_menu_item**)calloc(dcount + fcount + 1, sizeof(recovery_menu_item*));
         i = 0;
-        for(j = 0; j < dcount; ++i, ++j) {
-            items[i] = create_menu_item(fsm->dirs[j]->id, fsm->dirs[j]->name);
+        for(j = 0; j < fcount; ++i, ++j) {
+            items[i] = create_menu_item(fsm->files[j]->id, fsm->files[j]->name);
         }
-        for(k = 0; k < fcount; ++i, ++k) {
-            items[i] = create_menu_item(fsm->files[k]->id, fsm->files[k]->name);
+        for(k = 0; k < dcount; ++i, ++k) {
+            items[i] = create_menu_item(fsm->dirs[k]->id, fsm->dirs[k]->name);
         }
         items[i] = NULL;
     } else {
