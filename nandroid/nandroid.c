@@ -29,6 +29,8 @@
 
 #define NANDROID_MD5_EXT ".md5"
 
+extern int __system(const char* command);
+
 // determines the default nandroid type for non-raw partitions
 int get_default_nandroid_type() {
     // TODO: determine this from an option

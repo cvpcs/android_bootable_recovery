@@ -31,6 +31,7 @@
 #include "common.h"
 #include "minui/minui.h"
 #include "recovery_ui.h"
+#include "recovery_lib.h"
 
 #define MAX_COLS 96
 #define MAX_ROWS 32
@@ -327,7 +328,7 @@ static void *input_thread(void *cookie)
         }
 
         if (ev.value > 0 && device_reboot_now(key_pressed, ev.code)) {
-            reboot(RB_AUTOBOOT);
+            recovery_reboot(RB_AUTOBOOT);
         }
     }
     return NULL;

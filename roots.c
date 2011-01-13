@@ -35,7 +35,7 @@ const PartitionInfo device_partitions[] = {
         {PARTITION_BOOT,       "/boot",       "Boot",                                  PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
         {PARTITION_SYSTEM,     "/system",     "System",     PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
         {PARTITION_DATA,       "/data",       "Data",       PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
-        {PARTITION_DATADATA,   "/datadata",   "Datadata",                              PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
+        {PARTITION_DATADATA,   "/datadata",   "Datadata",   PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
         {PARTITION_CACHE,      "/cache",      "Cache",      PARTITION_FLAG_MOUNTABLE | PARTITION_FLAG_WIPEABLE | PARTITION_FLAG_SAVEABLE | PARTITION_FLAG_RESTOREABLE},
         {PARTITION_SDCARD,     "/sdcard",     "SDCard",     PARTITION_FLAG_MOUNTABLE                                                                                 },
         {PARTITION_MISC,       "/misc",       "Misc",                                                            PARTITION_FLAG_SAVEABLE                             },

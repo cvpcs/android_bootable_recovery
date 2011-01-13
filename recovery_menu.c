@@ -72,11 +72,11 @@ void prompt_and_wait()
 	    return;
 	case ITEM_RECOVERY:
 		ui_print("\n\n\n\n\n\n\n\n\n\n\n\n\nRebooting Recovery...");
-		reboot(RB_AUTOBOOT);
+		recovery_reboot(RB_AUTOBOOT);
 	    return;
 	case ITEM_POWEROFF:
 	    ui_print("\n\n\n\n\n\n\n\n\n\n\n\n\nShutting down...");
-		reboot(RB_POWER_OFF);
+		recovery_reboot(RB_POWER_OFF);
 	    return;
 	case ITEM_WIPE_PARTS:
 	    show_wipe_menu();

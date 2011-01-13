@@ -701,6 +701,7 @@ main(int argc, char **argv) {
     ui_init();
     ui_set_background(BACKGROUND_ICON_INSTALLING);
     load_volume_table();
+    process_volumes();
     get_args(&argc, &argv);
 
     //    ensure_path_mounted("/sdcard");
@@ -809,8 +810,8 @@ main(int argc, char **argv) {
         status = install_package(update_package);
         if (status != INSTALL_SUCCESS) ui_print("Installation aborted.\n");
     } else if (install_tgz != NULL) {
-	status = install_rom_from_tar(install_tgz);
-	if (status != INSTALL_SUCCESS) ui_print("Installation aborted.\n");
+        status = install_rom_from_tar(install_tgz);
+        if (status != INSTALL_SUCCESS) ui_print("Installation aborted.\n");
     } else if (wipe_data) {
         if (device_wipe_data()) status = INSTALL_ERROR;
         if (erase_volume("/data")) status = INSTALL_ERROR;
@@ -838,10 +839,10 @@ main(int argc, char **argv) {
     finish_recovery(send_intent);
     ui_print("Rebooting...\n");
     {
-	ensure_path_mounted(SAVE_LOG_FILE);
-	rename(TEMPORARY_LOG_FILE, SAVE_LOG_FILE);
+        ensure_path_mounted(SAVE_LOG_FILE);
+        rename(TEMPORARY_LOG_FILE, SAVE_LOG_FILE);
     }
     sync();
-    reboot(RB_AUTOBOOT);
+    recovery_reboot(RB_AUTOBOOT);
     return EXIT_SUCCESS;
 }

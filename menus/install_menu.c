@@ -31,7 +31,7 @@ void install_rom_from_tar(char* filename)
 
     int status = runve("/sbin/nandroid-mobile.sh",argv,envp,1);
     if(!WIFEXITED(status) || WEXITSTATUS(status)!=0) {
-        ui_printf_int("ERROR: install exited with status %d\n", WEXITSTATUS(status));
+        ui_print("ERROR: install exited with status %d\n", WEXITSTATUS(status));
         return;
     } else {
         ui_print("(done)\n");
