@@ -42,6 +42,7 @@
 #include "encryptedfs_provisioning.h"
 
 #include "recovery_lib.h"
+#include "recovery_config.h"
 #include "recovery_menu.h"
 
 // we need this for tgz support
@@ -702,6 +703,7 @@ main(int argc, char **argv) {
     ui_set_background(BACKGROUND_ICON_INSTALLING);
     load_volume_table();
     process_volumes();
+    load_config();
     get_args(&argc, &argv);
 
     //    ensure_path_mounted("/sdcard");

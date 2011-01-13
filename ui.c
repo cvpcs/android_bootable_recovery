@@ -32,6 +32,7 @@
 #include "minui/minui.h"
 #include "recovery_ui.h"
 #include "recovery_lib.h"
+#include "recovery_config.h"
 
 #define MAX_COLS 96
 #define MAX_ROWS 32
@@ -44,11 +45,6 @@
 
 #define PROGRESSBAR_INDETERMINATE_STATES 6
 #define PROGRESSBAR_INDETERMINATE_FPS 24
-
-#define NORMAL_TEXT_COLOR        255, 255, 255, 255
-#define HEADER_TEXT_COLOR        NORMAL_TEXT_COLOR
-#define MENU_TEXT_COLOR           54,  74, 255, 255
-#define MENU_SELECTED_TEXT_COLOR NORMAL_TEXT_COLOR
 
 static pthread_mutex_t gUpdateMutex = PTHREAD_MUTEX_INITIALIZER;
 static gr_surface gBackgroundIcon[NUM_BACKGROUND_ICONS];
@@ -161,6 +157,79 @@ static void draw_text_line(int row, const char* t) {
     }
 }
 
+#define COLOR_NORMAL_TEXT        0
+#define COLOR_HEADER_TEXT        1
+#define COLOR_MENU               2
+#define COLOR_MENU_TEXT          3
+#define COLOR_MENU_SELECTED_TEXT 4
+
+static void gr_custom_color(int color) {
+    recovery_config* rconfig = get_config();
+
+    if(rconfig) { // if we have a valid config, set accordingly
+        switch(color) {
+        case COLOR_NORMAL_TEXT:
+            gr_color(
+                    rconfig->color_normal_text.r,
+                    rconfig->color_normal_text.g,
+                    rconfig->color_normal_text.b,
+                    rconfig->color_normal_text.a
+                );
+            break;
+        case COLOR_HEADER_TEXT:
+            gr_color(
+                    rconfig->color_header_text.r,
+                    rconfig->color_header_text.g,
+                    rconfig->color_header_text.b,
+                    rconfig->color_header_text.a
+                );
+            break;
+        case COLOR_MENU:
+            gr_color(
+                    rconfig->color_menu.r,
+                    rconfig->color_menu.g,
+                    rconfig->color_menu.b,
+                    rconfig->color_menu.a
+                );
+            break;
+        case COLOR_MENU_TEXT:
+            gr_color(
+                    rconfig->color_menu_text.r,
+                    rconfig->color_menu_text.g,
+                    rconfig->color_menu_text.b,
+                    rconfig->color_menu_text.a
+                );
+            break;
+        case COLOR_MENU_SELECTED_TEXT:
+            gr_color(
+                    rconfig->color_menu_selected_text.r,
+                    rconfig->color_menu_selected_text.g,
+                    rconfig->color_menu_selected_text.b,
+                    rconfig->color_menu_selected_text.a
+                );
+            break;
+        default:
+            // do nothing
+            break;
+        }
+    } else { // something went wrong, set to black and white
+        switch(color) {
+        case COLOR_NORMAL_TEXT:
+        case COLOR_HEADER_TEXT:
+        case COLOR_MENU:
+        case COLOR_MENU_TEXT:
+            gr_color(255, 255, 255, 255);
+            break;
+        case COLOR_MENU_SELECTED_TEXT:
+            gr_color(0, 0, 0, 255);
+            break;
+        default:
+            // do nothing
+            break;
+        }
+    }
+}
+
 // Redraw everything on the screen.  Does not flip pages.
 // Should only be called with gUpdateMutex locked.
 static void draw_screen_locked(void)
@@ -176,11 +245,11 @@ static void draw_screen_locked(void)
         int j = 0;
         int row = 0;            // current row that we are drawing on
         if (show_menu) {
-            gr_color(MENU_TEXT_COLOR);
+            gr_custom_color(COLOR_MENU);
             gr_fill(0, (menu_top + menu_sel - menu_show_start) * CHAR_HEIGHT,
                     gr_fb_width(), (menu_top + menu_sel - menu_show_start + 1)*CHAR_HEIGHT+1);
 
-            gr_color(HEADER_TEXT_COLOR);
+            gr_custom_color(COLOR_HEADER_TEXT);
             for (i = 0; i < menu_top; ++i) {
                 draw_text_line(i, menu[i]);
                 row++;
@@ -191,24 +260,25 @@ static void draw_screen_locked(void)
             else
                 j = menu_items - menu_show_start;
 
-            gr_color(MENU_TEXT_COLOR);
+            gr_custom_color(COLOR_MENU_TEXT);
             for (i = menu_show_start + menu_top; i < (menu_show_start + menu_top + j); ++i) {
                 if (i == menu_top + menu_sel) {
-                    gr_color(MENU_SELECTED_TEXT_COLOR);
+                    gr_custom_color(COLOR_MENU_SELECTED_TEXT);
                     draw_text_line(i - menu_show_start , menu[i]);
-                    gr_color(MENU_TEXT_COLOR);
+                    gr_custom_color(COLOR_MENU_TEXT);
                 } else {
-                    gr_color(MENU_TEXT_COLOR);
+                    gr_custom_color(COLOR_MENU_TEXT);
                     draw_text_line(i - menu_show_start, menu[i]);
                 }
                 row++;
             }
+            gr_custom_color(COLOR_MENU);
             gr_fill(0, row*CHAR_HEIGHT+CHAR_HEIGHT/2-1,
                     gr_fb_width(), row*CHAR_HEIGHT+CHAR_HEIGHT/2+1);
             row++;
         }
 
-        gr_color(NORMAL_TEXT_COLOR);
+        gr_custom_color(COLOR_NORMAL_TEXT);
         for (; row < text_rows; ++row) {
             draw_text_line(row, text[(row+text_top) % text_rows]);
         }

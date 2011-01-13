@@ -14,6 +14,7 @@
 #include "bootloader.h"
 #include "minui/minui.h"
 #include "recovery_ui.h"
+#include "recovery_config.h"
 #include "minzip/DirUtil.h"
 
 extern int __system(const char* command);
@@ -270,5 +271,9 @@ void process_volumes() {
 }
 
 int recovery_reboot(int cmd) {
+    // save our config
+    save_config();
+    sync();
+
     return reboot(cmd);
 }

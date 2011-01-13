@@ -15,6 +15,7 @@ LOCAL_SRC_FILES := \
     recovery.c \
     recovery_lib.c \
     recovery_menu.c \
+    recovery_config.c \
     bootloader.c \
     install.c \
     roots.c \
