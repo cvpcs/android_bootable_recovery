@@ -13,7 +13,8 @@
 #include "minui/minui.h"
 #include "roots.h"
 #include "nandroid_menu.h"
-#include "nandroid.h"
+
+#include "nandroid/nandroid.h"
 
 /*
 void nandroid_backup_menu(char* subname, char partitions)

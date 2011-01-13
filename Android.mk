@@ -21,8 +21,11 @@ LOCAL_SRC_FILES := \
     mounts.c \
     ui.c \
     verifier.c \
-    nandroid.c \
     encryptedfs_provisioning.c
+
+# add nandroid
+LOCAL_SRC_FILES += \
+    nandroid/nandroid.c
 
 # add our menus
 LOCAL_SRC_FILES += \
