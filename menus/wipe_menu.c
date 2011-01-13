@@ -19,8 +19,6 @@ void wipe_partition(int which, int confirm) {
         }
     }
 
-ui_print("Planning on wiping %s", device_partitions[which].path);
-
     // we should be good to go now
 
     if (confirm) {
