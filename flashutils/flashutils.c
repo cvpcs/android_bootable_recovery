@@ -10,7 +10,9 @@ int the_flash_type = UNKNOWN;
 int device_flash_type()
 {
     if (the_flash_type == UNKNOWN) {
-        if (access("/proc/emmc", F_OK) == 0) {
+        if (access("/dev/block/bml1", F_OK) == 0) {
+            the_flash_type = BML;
+        } else if (access("/proc/emmc", F_OK) == 0) {
             the_flash_type = MMC;
         } else if (access("/proc/mtd", F_OK) == 0) {
             the_flash_type = MTD;
@@ -75,6 +77,8 @@ int restore_raw_partition(const char *partition, const char *filename)
             return cmd_mtd_restore_raw_partition(partition, filename);
         case MMC:
             return cmd_mmc_restore_raw_partition(partition, filename);
+        case BML:
+            return cmd_bml_restore_raw_partition(partition, filename);
         default:
             return -1;
     }
@@ -88,6 +92,8 @@ int backup_raw_partition(const char *partition, const char *filename)
             return cmd_mtd_backup_raw_partition(partition, filename);
         case MMC:
             return cmd_mmc_backup_raw_partition(partition, filename);
+        case BML:
+            return cmd_bml_backup_raw_partition(partition, filename);
         default:
             return -1;
     }
@@ -101,6 +107,8 @@ int erase_raw_partition(const char *partition)
             return cmd_mtd_erase_raw_partition(partition);
         case MMC:
             return cmd_mmc_erase_raw_partition(partition);
+        case BML:
+            return cmd_bml_erase_raw_partition(partition);
         default:
             return -1;
     }
@@ -114,6 +122,8 @@ int erase_partition(const char *partition, const char *filesystem)
             return cmd_mtd_erase_partition(partition, filesystem);
         case MMC:
             return cmd_mmc_erase_partition(partition, filesystem);
+        case BML:
+            return cmd_bml_erase_partition(partition, filesystem);
         default:
             return -1;
     }
@@ -127,6 +137,8 @@ int mount_partition(const char *partition, const char *mount_point, const char *
             return cmd_mtd_mount_partition(partition, mount_point, filesystem, read_only);
         case MMC:
             return cmd_mmc_mount_partition(partition, mount_point, filesystem, read_only);
+        case BML:
+            return cmd_bml_mount_partition(partition, mount_point, filesystem, read_only);
         default:
             return -1;
     }
@@ -140,6 +152,8 @@ int get_partition_device(const char *partition, char *device)
             return cmd_mtd_get_partition_device(partition, device);
         case MMC:
             return cmd_mmc_get_partition_device(partition, device);
+        case BML:
+            return cmd_bml_get_partition_device(partition, device);
         default:
             return -1;
     }
