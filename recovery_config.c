@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "roots.h"
+#include "nandroid/nandroid.h"
 
 #define RECOVERY_CONFIG_FILE "/cache/recovery_config.dat"
 
@@ -66,6 +67,8 @@ void load_config() {
         rconfig->nandroid_do_md5_verification = 1;
         // default to not checking signatures on installation
         rconfig->install_do_signature_verification = 0;
+        // tar will be our default nandroid type
+        rconfig->nandroid_type = NANDROID_TYPE_TAR;
     }
 }
 

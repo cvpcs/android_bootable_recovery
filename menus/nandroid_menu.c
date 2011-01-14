@@ -14,7 +14,7 @@
 #include "roots.h"
 #include "nandroid_menu.h"
 
-#include "nandroid/nandroid.h"
+#include "nandroid/nandroid_scan.h"
 
 recovery_menu_item** select_nandroid_menu_create_items(void* data) {
     nandroid** nandroids = nandroid_scan();
@@ -181,9 +181,6 @@ int nandroid_adv_restore_menu_select(int chosen_item, void* data) {
                 n->partitions[j] = nandroids[i]->partitions[j];
             }
             n->partitions[j] = INT_MAX;
-
-            // set md5 bit
-            n->md5 = nandroids[i]->md5;
         }
     } else if(chosen_item < device_partition_num) {
         // cycle through the partition list and toggle whichever one they selected
@@ -218,7 +215,6 @@ void show_nandroid_adv_restore_menu() {
     nandroid* n = (nandroid*)malloc(sizeof(nandroid));
     n->partitions = NULL;
     n->dir = NULL;
-    n->md5 = 0;
 
     recovery_menu* menu = create_menu(
             headers,

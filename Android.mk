@@ -26,7 +26,10 @@ LOCAL_SRC_FILES := \
 
 # add nandroid
 LOCAL_SRC_FILES += \
-    nandroid/nandroid.c
+    nandroid/nandroid.c \
+    nandroid/nandroid_raw.c \
+    nandroid/nandroid_scan.c \
+    nandroid/nandroid_tar.c
 
 # add our menus
 LOCAL_SRC_FILES += \

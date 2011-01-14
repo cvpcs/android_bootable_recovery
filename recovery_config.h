@@ -19,6 +19,9 @@ typedef struct {
     // verification configs
     int nandroid_do_md5_verification;
     int install_do_signature_verification;
+
+    // default type of nandroid
+    int nandroid_type;
 } recovery_config;
 
 // load and save the config
