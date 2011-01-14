@@ -14,7 +14,11 @@ typedef struct {
     recovery_config_color color_header_text;
     recovery_config_color color_menu;
     recovery_config_color color_menu_text;
-    recovery_config_color color_menu_selected_text; 
+    recovery_config_color color_menu_selected_text;
+
+    // verification configs
+    int nandroid_do_md5_verification;
+    int install_do_signature_verification;
 } recovery_config;
 
 // load and save the config

@@ -32,6 +32,7 @@
 #include "mounts.h"
 #include "roots.h"
 #include "verifier.h"
+#include "recovery_config.h"
 
 #define ASSUMED_UPDATE_BINARY_NAME  "META-INF/com/google/android/update-binary"
 #define ASSUMED_UPDATE_SCRIPT_NAME  "META-INF/com/google/android/update-script"
@@ -259,34 +260,34 @@ install_package(const char *path)
 
     ui_print("Opening update package...\n");
 
-    /**
-     * We don't bother with verification
-     *
-    int numKeys;
-    RSAPublicKey* loadedKeys = load_keys(PUBLIC_KEYS_FILE, &numKeys);
-    if (loadedKeys == NULL) {
-        LOGE("Failed to load keys\n");
-        return INSTALL_CORRUPT;
-    }
-    LOGI("%d key(s) loaded from %s\n", numKeys, PUBLIC_KEYS_FILE);
-
-    // Give verification half the progress bar...
-    ui_print("Verifying update package...\n");
-    ui_show_progress(
-            VERIFICATION_PROGRESS_FRACTION,
-            VERIFICATION_PROGRESS_TIME);
-     */
     int err;
-    /*
-    err = verify_file(path, loadedKeys, numKeys);
-    free(loadedKeys);
-    LOGI("verify_file returned %d\n", err);
-    if (err != VERIFY_SUCCESS) {
-        LOGE("signature verification failed\n");
-        return INSTALL_CORRUPT;
+
+    // attempt to get our config
+    recovery_config* rconfig = get_config();
+    // only verify signature if we have the config setting saying to
+    if(rconfig && rconfig->install_do_signature_verification) {
+        int numKeys;
+        RSAPublicKey* loadedKeys = load_keys(PUBLIC_KEYS_FILE, &numKeys);
+        if (loadedKeys == NULL) {
+            LOGE("Failed to load keys\n");
+            return INSTALL_CORRUPT;
+        }
+        LOGI("%d key(s) loaded from %s\n", numKeys, PUBLIC_KEYS_FILE);
+
+        // Give verification half the progress bar...
+        ui_print("Verifying update package...\n");
+        ui_show_progress(
+                VERIFICATION_PROGRESS_FRACTION,
+                VERIFICATION_PROGRESS_TIME);
+
+        err = verify_file(path, loadedKeys, numKeys);
+        free(loadedKeys);
+        LOGI("verify_file returned %d\n", err);
+        if (err != VERIFY_SUCCESS) {
+            LOGE("signature verification failed\n");
+            return INSTALL_CORRUPT;
+        }
     }
-     * End verification comment
-     */
 
     /* Try to open the package.
      */

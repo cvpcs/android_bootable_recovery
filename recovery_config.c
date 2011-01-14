@@ -7,12 +7,6 @@
 
 #define RECOVERY_CONFIG_FILE "/cache/recovery_config.dat"
 
-#define DEFAULT_COLOR_NORMAL_TEXT        255, 255, 255, 255
-#define DEFAULT_COLOR_HEADER_TEXT        DEFAULT_COLOR_NORMAL_TEXT
-#define DEFAULT_COLOR_MENU                54,  74, 255, 255
-#define DEFAULT_COLOR_MENU_TEXT          DEFAULT_COLOR_MENU
-#define DEFAULT_COLOR_MENU_SELECTED_TEXT DEFAULT_COLOR_NORMAL_TEXT
-
 static recovery_config* rconfig = NULL;
 
 void load_config() {
@@ -68,6 +62,10 @@ void load_config() {
         rconfig->color_menu_selected_text.g = 255;
         rconfig->color_menu_selected_text.b = 255;
         rconfig->color_menu_selected_text.a = 255;
+        // default to checking MD5's on nandroid
+        rconfig->nandroid_do_md5_verification = 1;
+        // default to not checking signatures on installation
+        rconfig->install_do_signature_verification = 0;
     }
 }
 
