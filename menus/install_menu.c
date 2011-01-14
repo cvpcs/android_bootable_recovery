@@ -53,7 +53,7 @@ void install_update_zip(char* filename) {
         return;
     } else {
         ui_print("\nInstall from sdcard complete.\n");
-        ui_print("\nThanks for using RZrecovery.\n");
+        ui_print("\nThanks for using RCRecovery.\n");
     }
 }
 
@@ -64,7 +64,7 @@ void install_kernel_img(char* filename) {
     ensure_path_mounted(filename);
     int status = restore_raw_partition("boot", filename);
     ui_print("\nKernel flash from sdcard complete.\n");
-    ui_print("\nThanks for using RZrecovery.\n");
+    ui_print("\nThanks for using RCRecovery.\n");
 }
 
 void install_recovery_img(char* filename) {
@@ -74,7 +74,7 @@ void install_recovery_img(char* filename) {
     ensure_path_mounted(filename);
     int status = restore_raw_partition("recovery", filename);
     ui_print("\nRecovery flash from sdcard complete.\n");
-    ui_print("\nThanks for using RZrecovery.\n");
+    ui_print("\nThanks for using RCRecovery.\n");
 }
 
 #define INSTALL_ITEM_TAR      1
