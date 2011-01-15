@@ -44,11 +44,11 @@ int nandroid_restore_path_tar_ext(char* path, char* backup_path, const char* tar
     return ret;
 }
 
-int nandroid_backup_path_tar(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -cf %s -C %s");  }
-int nandroid_restore_path_tar(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -xf %s -C %s"); }
+int nandroid_backup_path_tar(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -cf %s . -C %s");  }
+int nandroid_restore_path_tar(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -xf %s . -C %s"); }
 
-int nandroid_backup_path_tar_gz(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -zcf %s -C %s");  }
-int nandroid_restore_path_tar_gz(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -zxf %s -C %s"); }
+int nandroid_backup_path_tar_gz(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -zcf %s . -C %s");  }
+int nandroid_restore_path_tar_gz(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -zxf %s . -C %s"); }
 
-int nandroid_backup_path_tar_bz2(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -jcf %s -C %s");  }
-int nandroid_restore_path_tar_bz2(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -jxf %s -C %s"); }
+int nandroid_backup_path_tar_bz2(char* path, char* backup_path)  { return nandroid_backup_path_tar_ext(path, backup_path, "tar -jcf %s . -C %s");  }
+int nandroid_restore_path_tar_bz2(char* path, char* backup_path) { return nandroid_restore_path_tar_ext(path, backup_path, "tar -jxf %s . -C %s"); }

@@ -712,7 +712,7 @@ main(int argc, char **argv) {
 
     //    ui_print("Mounted /sdcard\n");
 
-    ui_print("Welcome to RCRecovery.  Use the volume up and   down buttons to move between menu options, the  camera button to select them, and the power     button to back out of a menu.\n\nThis version is made for RZ Baseline ROM.\n");
+    ui_print("Welcome to RCRecovery.  Use the volume up and   down buttons to move between menu options, the  camera button to select them, and the power     button to back out of a menu.\n\n");
 
     int previous_runs = 0;
     const char *send_intent = NULL;

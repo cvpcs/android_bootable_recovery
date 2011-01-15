@@ -145,8 +145,8 @@ int nandroid_md5_create(char* backup_dir) {
     	while ((de = readdir(dir)) != NULL) {
             if(de->d_name[0] != '.' && // don't do '.' files
                     de->d_type == DT_REG && // make sure it's a regular file
-                    strcmp(de->d_type, NANDROID_MD5SUM_FILE) != 0) { // dont md5 the md5 file if overwriting
-                if(count++ > 0) {
+                    strcmp(de->d_name, NANDROID_MD5SUM_FILE) != 0) { // dont md5 the md5 file if overwriting
+                if(count++ == 0) {
                     int cmdlen = strlen(create_md5_format) + strlen(backup_dir) + strlen(de->d_name) + strlen(NANDROID_MD5SUM_FILE);
                     char* cmd = (char*)calloc(cmdlen, sizeof(char));
                     snprintf(cmd, cmdlen, create_md5_format, backup_dir, de->d_name, NANDROID_MD5SUM_FILE);
@@ -190,10 +190,39 @@ int nandroid_md5_check(char* backup_dir) {
     else
         ui_print("done\n");
 
+    free(cmd);
+    return ret;
+}
+
+int nandroid_ensure_dir(char* backup_dir) {
+    ensure_path_mounted(backup_dir);
+
+    const char* remove_dir_format = "rm -f %s/*";
+    const char* ensure_dir_format = "mkdir -p %s";
+
+    int cmdlen = strlen(remove_dir_format) + strlen(backup_dir);
+    char* cmd = (char*)calloc(cmdlen, sizeof(char));
+    snprintf(cmd, cmdlen, remove_dir_format, backup_dir);
+    int ret = __system(cmd);
+    free(cmd);
+
+    cmdlen = strlen(ensure_dir_format) + strlen(backup_dir);
+    cmd = (char*)calloc(cmdlen, sizeof(char));
+    snprintf(cmd, cmdlen, ensure_dir_format, backup_dir);
+    ret |= __system(cmd);
+    free(cmd);
+
     return ret;
 }
 
 void nandroid_backup(char* backup_dir, int* partitions) {
+    int ret;
+
+    if(0 != (ret = nandroid_ensure_dir(backup_dir))) {
+        ui_print("Error creating backup directory (%d)\n", ret);
+        return;
+    }
+
     if(partitions == NULL) {
         // if null, we will be backing up all of them
         int i;
