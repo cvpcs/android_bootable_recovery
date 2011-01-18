@@ -701,9 +701,12 @@ main(int argc, char **argv) {
 
     ui_init();
     ui_set_background(BACKGROUND_ICON_INSTALLING);
+    ui_print("Welocome to RCRecovery\n\n");
     load_volume_table();
     process_volumes();
+    ui_print("Loading recovery configuration ... ");
     load_config();
+    ui_print("done\n\n");
     get_args(&argc, &argv);
 
     //    ensure_path_mounted("/sdcard");
@@ -712,7 +715,7 @@ main(int argc, char **argv) {
 
     //    ui_print("Mounted /sdcard\n");
 
-    ui_print("Welcome to RCRecovery.  Use the volume up and   down buttons to move between menu options, the  camera button to select them, and the power     button to back out of a menu.\n\n");
+    ui_print("Use the volume up and down buttons to move      between menu options, the camera button to      select them, and the power button to back out   of a menu.\n\n");
 
     int previous_runs = 0;
     const char *send_intent = NULL;

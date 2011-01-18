@@ -16,6 +16,7 @@ typedef struct {
 } recovery_menu_item;
 
 recovery_menu_item* create_menu_item(int id, const char* title);
+recovery_menu_item* create_menu_item_checkbox(int id, const char* title, int checked);
 recovery_menu_item* duplicate_menu_item(recovery_menu_item* item);
 void destroy_menu_item(recovery_menu_item* item);
 

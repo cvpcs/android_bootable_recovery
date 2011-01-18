@@ -6,7 +6,7 @@
 #include "roots.h"
 #include "nandroid/nandroid.h"
 
-#define RECOVERY_CONFIG_FILE "/cache/recovery_config.dat"
+#define RECOVERY_CONFIG_FILE "/data/rc_data"
 
 static recovery_config* rconfig = NULL;
 
@@ -24,16 +24,27 @@ void load_config() {
     rconfig = (recovery_config*)malloc(size);
 
     // ensure our path is mounted
-    ensure_path_mounted(RECOVERY_CONFIG_FILE);
+    int was_mounted = is_path_mounted(RECOVERY_CONFIG_FILE);
+    if(0 != ensure_path_mounted(RECOVERY_CONFIG_FILE)) {
+        LOGW("Error mounting config path.  Config will load defaults.\n");
+    } else {
+        FILE *file = fopen(RECOVERY_CONFIG_FILE, "rb"); /* read from the file in binary mode */
+        if(file != NULL) {
+            // if we get a valid size, we don't need to set our data to defaults
+            if(1 == fread(rconfig, size, 1, file)) {
+                load_defaults = 0;
+            } else {
+                LOGE("Invalid config data found.  Config will load defaults.\n");
+            }
 
-    FILE *file = fopen(RECOVERY_CONFIG_FILE, "rb"); /* read from the file in binary mode */
-    if(file != NULL) {
-        // if we get a valid size, we don't need to set our data to defaults
-        if(size == fread(rconfig, size, 1, file)) {
-            load_defaults = 0;
+            fclose(file);
+        } else {
+            LOGW("Error opening config file.  Config will load defaults.\n");
         }
 
-        fclose(file);
+        if(was_mounted) {
+            ensure_path_unmounted(RECOVERY_CONFIG_FILE);
+        }
     }
 
     // did something go wrong so we need to load defaults?
@@ -75,17 +86,24 @@ void load_config() {
 void save_config() {
     // only save if it exists
     if(rconfig) {
+        int was_mounted = is_path_mounted(RECOVERY_CONFIG_FILE);
+
         // ensure root mounted
-        ensure_path_mounted(RECOVERY_CONFIG_FILE);
+        if(0 != ensure_path_mounted(RECOVERY_CONFIG_FILE)) {
+            LOGE("Error mounting config file path!  Config settings won't be saved.\n");
+        } else {
+            FILE *file = fopen(RECOVERY_CONFIG_FILE, "wb"); /* write to the file in binary mode */
+            if(file != NULL) {
+                fwrite(rconfig, sizeof(recovery_config), 1, file);
+                fclose(file);
+            } else {
+                LOGE("Error opening config file for writing!  Config settings won't be saved.\n");
+            }
 
-        FILE *file = fopen(RECOVERY_CONFIG_FILE, "wb"); /* write to the file in binary mode */
-        if(file != NULL) {
-            fwrite(rconfig, sizeof(recovery_config), 1, file);
-            fclose(file);
+            if(was_mounted) {
+                ensure_path_unmounted(RECOVERY_CONFIG_FILE);
+            }
         }
-
-        free(rconfig);
-        rconfig = NULL;
     }
 }
 

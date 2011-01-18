@@ -29,13 +29,15 @@ LOCAL_SRC_FILES += \
     nandroid/nandroid.c \
     nandroid/nandroid_raw.c \
     nandroid/nandroid_scan.c \
-    nandroid/nandroid_tar.c
+    nandroid/nandroid_tar.c \
+    nandroid/nandroid_yaffs.c
 
 # add our menus
 LOCAL_SRC_FILES += \
     menus/nandroid_menu.c \
     menus/install_menu.c \
     menus/mount_menu.c \
+    menus/options_menu.c \
     menus/wipe_menu.c
 
 LOCAL_MODULE := recovery
@@ -80,7 +82,7 @@ else
     LOCAL_STATIC_LIBRARIES += libext4_utils
 endif
 LOCAL_STATIC_LIBRARIES += libe2fsck libtune2fs libmke2fs libext2fs libext2_blkid libext2_uuid libext2_profile libext2_com_err libext2_e2p
-LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex
+LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex libunyaffs libmkyaffs2image
 LOCAL_STATIC_LIBRARIES += libflash_image libdump_image liberase_image
 LOCAL_STATIC_LIBRARIES += libminzip libunz libflashutils libmtdutils libmmcutils libbmlutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
@@ -91,6 +93,7 @@ ifeq ($(USE_INTERNAL_EXT4UTILS),true)
 else
     LOCAL_C_INCLUDES += system/extras/ext4_utils
 endif
+LOCAL_C_INCLUDES += external/yaffs2/yaffs2/utils
 
 include $(BUILD_EXECUTABLE)
 

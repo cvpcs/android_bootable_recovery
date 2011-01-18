@@ -17,6 +17,7 @@
 // menus
 #include "menus/nandroid_menu.h"
 #include "menus/mount_menu.h"
+#include "menus/options_menu.h"
 #include "menus/install_menu.h"
 #include "menus/wipe_menu.h"
 
@@ -36,6 +37,7 @@ void prompt_and_wait()
                       "Mount options",
                       "Backup/restore",
                       "Install",
+                      "Options",
                       "Help",
                       NULL };
 
@@ -51,7 +53,8 @@ void prompt_and_wait()
 #define ITEM_MOUNT_MENU      4
 #define ITEM_NANDROID_MENU   5
 #define ITEM_INSTALL         6
-#define ITEM_HELP            7
+#define ITEM_OPTIONS         7
+#define ITEM_HELP            8
 
     int chosen_item = -1;
     for (;;) {
@@ -90,6 +93,9 @@ void prompt_and_wait()
 	case ITEM_INSTALL:
 	    show_install_menu();
 	    break;
+        case ITEM_OPTIONS:
+            show_options_menu();
+            break;
 	case ITEM_HELP:
 		ui_print("\n\n\nHELP/FEATURES:\n");
 		ui_print("1.1ghz kernel, wipe menu,\n");
@@ -128,6 +134,23 @@ recovery_menu_item* create_menu_item(int id, const char* title) {
     recovery_menu_item* item = (recovery_menu_item*)malloc(sizeof(recovery_menu_item));
     item->id = id;
     item->title = strdup(title);
+    return item;
+}
+
+recovery_menu_item* create_menu_item_checkbox(int id, const char* title, int checked) {
+    const char* format = "[%s] %s";
+    const char* check = "X";
+    const char* clear = " ";
+
+    int buflen = strlen(format) + strlen(check) + strlen(clear) + strlen(title);
+    char* buf = (char*)calloc(buflen, sizeof(char));
+
+    snprintf(buf, buflen, format, (checked ? check : clear), title);
+
+    recovery_menu_item* item = create_menu_item(id, buf);
+
+    free(buf);
+
     return item;
 }
 

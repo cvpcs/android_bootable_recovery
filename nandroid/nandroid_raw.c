@@ -6,7 +6,10 @@
 #include "nandroid/nandroid.h"
 
 int nandroid_backup_path_raw(char* path, char* backup_path) {
-    ensure_path_unmounted(path);
+    int ret;
+    if(0 != (ret = ensure_path_unmounted(path))) {
+        return ret;
+    }
 
     Volume* v = volume_for_path(path);
     if(v == NULL) {
@@ -17,7 +20,10 @@ int nandroid_backup_path_raw(char* path, char* backup_path) {
 }
 
 int nandroid_restore_path_raw(char* path, char* backup_path) {
-    ensure_path_unmounted(path);
+    int ret;
+    if(0 != (ret = ensure_path_unmounted(path))) {
+        return ret;
+    }
 
     Volume* v = volume_for_path(path);
     if(v == NULL) {
