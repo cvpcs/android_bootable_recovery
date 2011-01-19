@@ -87,20 +87,33 @@ int install_menu_select(int chosen_item, void* data) {
     char* tar_exts[]      = { ".rom.tgz", ".rom.tar.gz", ".rom.tar", NULL };
     char* kernel_exts[]   = { "boot.img", NULL };
     char* recovery_exts[] = { "-rec.img", "_rec.img", ".rec.img", NULL };
-	switch(chosen_item) {
-	case INSTALL_ITEM_ZIP:
-        display_file_select_menu("/sdcard", zip_exts, &install_update_zip);
-	    break;
-	case INSTALL_ITEM_TAR:
-        display_file_select_menu("/sdcard", tar_exts, &install_rom_from_tar);
-	    break;
-	case INSTALL_ITEM_KERNEL:
-        display_file_select_menu("/sdcard/kernel", kernel_exts, &install_kernel_img);
-		break;
-	case INSTALL_ITEM_RECOVERY:
-		display_file_select_menu("/sdcard/recovery", recovery_exts, &install_recovery_img);
-		break;
-	}
+
+    // selected file holder
+    char* file = NULL;
+
+    switch(chosen_item) {
+    case INSTALL_ITEM_ZIP:
+        file = display_file_select_menu("/sdcard", zip_exts);
+        if(file) { install_update_zip(file); }
+        break;
+    case INSTALL_ITEM_TAR:
+        display_file_select_menu("/sdcard", tar_exts);
+        if(file) { install_rom_from_tar(file); }
+        break;
+    case INSTALL_ITEM_KERNEL:
+        display_file_select_menu("/sdcard/kernel", kernel_exts);
+        if(file) { install_kernel_img(file); }
+        break;
+    case INSTALL_ITEM_RECOVERY:
+        file = display_file_select_menu("/sdcard/recovery", recovery_exts);
+        if(file) { install_recovery_img(file); }
+        break;
+    }
+
+    // if we selected a file, we need to free it
+    if(file) {
+        free(file);
+    }
 
     return chosen_item;
 }

@@ -295,6 +295,48 @@ void display_menu(recovery_menu* menu)
     }
 }
 
+int item_select_menu_select(int chosen_item, void* data) {
+    *((int*)data) = chosen_item;
+
+    return ITEM_BACK;
+}
+
+int display_item_select_menu(recovery_menu_item** items, int active) {
+    char* headers[] = { "Please smake a selection",
+                        "", NULL };
+
+    const char* format = "(%s) %s";
+    const char* check = "*";
+    const char* clear = " ";
+
+    // cycle through the items, modifying the text
+    recovery_menu_item** p;
+    for (p = items; *p; ++p) {
+        recovery_menu_item* i = *p;
+
+        int buflen = strlen(format) + strlen(check) + strlen(clear) + strlen(i->title);
+        char* buf = (char*)calloc(buflen, sizeof(char));
+        snprintf(buf, buflen, format, (i->id == active ? check : clear), i->title);
+        free(i->title);
+        i->title = buf;
+    }
+
+    int selection = ITEM_BACK;
+
+    recovery_menu* menu = create_menu(
+            headers,
+            items,
+            &selection,
+            /* no on_create */ NULL,
+            /* no on_create_items */ NULL,
+            &item_select_menu_select,
+            /* no on_destroy */ NULL);
+    display_menu(menu);
+    destroy_menu(menu);
+
+    return selection;
+}
+
 typedef struct {
     int id;
     char* name;
@@ -306,9 +348,9 @@ typedef struct {
     char** exts; // the valid extension list
     char* base_path; // the base path we are allowed to access (going "back" after this will consititue leaving the menu)
     char* cur_path; // the current "base path" we are viewing
+    char* selected_file; // the selected file (NULL if not selected yet)
     file_select_menu_item** dirs; // list of current directories
     file_select_menu_item** files; // list of current files
-    file_select_callback callback; // the callback
 } file_select_menu;
 
 #define FILE_SELECT_MENU_ITEM_DIR_ID_BASE 1000
@@ -539,8 +581,8 @@ int file_select_menu_select(int chosen_item, void* data) {
     // did we choose a file?
     for(i = 0; i < fcount; i++) {
         if(chosen_item == fsm->files[i]->id) {
-            // we selected a file! woohoo! time to call our callback and get the hell out of dodge
-            (*(fsm->callback))(fsm->files[i]->path);
+            // we selected a file! woohoo! time to save it and return
+            fsm->selected_file = strdup(fsm->files[i]->path);
             return ITEM_BACK;
         }
     }
@@ -549,11 +591,11 @@ int file_select_menu_select(int chosen_item, void* data) {
     return chosen_item;
 }
 
-void display_file_select_menu(char* base_path, char** exts, file_select_callback on_select) {
+char* display_file_select_menu(char* base_path, char** exts) {
     // make sure our path is mounted
     if (ensure_path_mounted(base_path) != 0) {
         LOGE("Can't mount %s (%s)\n", base_path, strerror(errno));
-        return;
+        return NULL;
     }
 
     // create our headers
@@ -565,9 +607,9 @@ void display_file_select_menu(char* base_path, char** exts, file_select_callback
     fsm->exts = exts;
     fsm->base_path = base_path;
     fsm->cur_path = strdup(base_path);
+    fsm->selected_file = NULL;
     fsm->dirs = NULL;
     fsm->files = NULL;
-    fsm->callback = on_select;
 
     recovery_menu* menu = create_menu(
             headers,
@@ -580,9 +622,14 @@ void display_file_select_menu(char* base_path, char** exts, file_select_callback
     display_menu(menu);
     destroy_menu(menu);
 
+    // save the selected file (this is NULL if none selected)
+    char* selected_file = fsm->selected_file;
+
     // destroy our data structure
     destroy_file_select_menu_item_list(fsm->dirs);
     destroy_file_select_menu_item_list(fsm->files);
     free(fsm->cur_path);
     free(fsm);
+
+    return selected_file;
 }

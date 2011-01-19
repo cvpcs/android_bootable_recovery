@@ -102,18 +102,32 @@ void destroy_menu(recovery_menu* menu);
 
 void display_menu(recovery_menu* menu);
 
-typedef void(*file_select_callback)(char*);
+/**
+ * Display a basic item selection menu
+ *
+ * shows a list of items, and returns the id of the selected one
+ *
+ * \param items the list of items to display
+ * \param active the id of the "active" item, or an invalid id if none are active
+ *
+ * \return the id of the selected item
+ *
+ * \note the items you pass in will be automatically free()'d by this function, so you
+ *       should not do so yourself
+ */
+int display_item_select_menu(recovery_menu_item** items, int active);
 
 /**
  * Display file selection menu
  *
- * shows a file selection menu, returns true or false as to whether you should keep displaying this
- * menu (file not selected) or break out (file selected)
+ * shows a file selection menu, and returns the selected file
  *
  * \param base_path path to start at
  * \param ext array of valid extensions to show
- * \param on_select method to call when a file is selected
+ *
+ * \return NULL if no file selected, or a pointer to a string containing the full path
+ *         of the selected file, which may be free()'d when you are done with it
  */
-void display_file_select_menu(char* base_path, char** exts, file_select_callback on_select);
+char* display_file_select_menu(char* base_path, char** exts);
 
 #endif//RECOVERY_RECOVERY_MENU_H_
