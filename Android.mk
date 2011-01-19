@@ -83,7 +83,7 @@ else
 endif
 LOCAL_STATIC_LIBRARIES += libe2fsck libtune2fs libmke2fs libext2fs libext2_blkid libext2_uuid libext2_profile libext2_com_err libext2_e2p
 LOCAL_STATIC_LIBRARIES += libz libbusybox libclearsilverregex libunyaffs libmkyaffs2image
-LOCAL_STATIC_LIBRARIES += libflash_image libdump_image liberase_image
+LOCAL_STATIC_LIBRARIES += libflash_image libdump_image liberase_image libxz liblzma
 LOCAL_STATIC_LIBRARIES += libminzip libunz libflashutils libmtdutils libmmcutils libbmlutils libmincrypt
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
@@ -99,6 +99,7 @@ include $(BUILD_EXECUTABLE)
 
 # make some recovery symlinks
 RECOVERY_LINKS := busybox e2fsck flash_image dump_image erase_image mke2fs tune2fs
+RECOVERY_LINKS += lzcat lzma unlzma unxz xz xzcat
 RECOVERY_SYMLINKS := $(addprefix $(TARGET_RECOVERY_ROOT_OUT)/sbin/,$(RECOVERY_LINKS))
 $(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)
 $(RECOVERY_SYMLINKS): $(LOCAL_INSTALLED_MODULE)

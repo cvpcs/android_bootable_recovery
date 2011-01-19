@@ -33,6 +33,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
@@ -295,44 +296,42 @@ mmc_find_partition_by_name(const char *name)
     return NULL;
 }
 
+extern int __system(const char* command);
+
 int
 format_ext3_device (const char *device) {
-    // Run mke2fs
-    char *const mke2fs[] = {"mke2fs", "-j", device, NULL};
-    if(mke2fs_main(3, mke2fs))
-        return -1;
+    char* buf = (char*)calloc(PATH_MAX, sizeof(char));
+    int ret = 0;
 
-    // Run tune2fs
-    char *const tune2fs[] = {"tune2fs", "-j", "-C", "1", device, NULL};
-    if(tune2fs_main(5, tune2fs))
-        return -1;
+    snprintf(buf, PATH_MAX, "mke2fs -j %s", device);
+    if(0 == (ret = __system(buf))) {
+        snprintf(buf, PATH_MAX, "tune2fs -j -C 1 %s", device);
+        if(0 == (ret = __system(buf))) {
+            snprintf(buf, PATH_MAX, "e2fsck -fy %s", device);
+            ret = __system(buf);
+        }
+    }
 
-    // Run e2fsck
-    char *const e2fsck[] = {"e2fsck", "-fy", device, NULL};
-    if(e2fsck_main(3, e2fsck))
-        return -1;
-
-    return 0;
+    free(buf);
+    return ret;
 }
 
 int
 format_ext2_device (const char *device) {
-    // Run mke2fs
-    char *const mke2fs[] = {"mke2fs", device, NULL};
-    if(mke2fs_main(2, mke2fs))
-        return -1;
+    char* buf = (char*)calloc(PATH_MAX, sizeof(char));
+    int ret = 0;
 
-    // Run tune2fs
-    char *const tune2fs[] = {"tune2fs", "-C", "1", device, NULL};
-    if(tune2fs_main(4, tune2fs))
-        return -1;
+    snprintf(buf, PATH_MAX, "mke2fs %s", device);
+    if(0 == (ret = __system(buf))) {
+        snprintf(buf, PATH_MAX, "tune2fs -C 1 %s", device);
+        if(0 == (ret = __system(buf))) {
+            snprintf(buf, PATH_MAX, "e2fsck -fy %s", device);
+            ret = __system(buf);
+        }
+    }
 
-    // Run e2fsck
-    char *const e2fsck[] = {"e2fsck", "-fy", device, NULL};
-    if(e2fsck_main(3, e2fsck))
-        return -1;
-
-    return 0;
+    free(buf);
+    return ret;
 }
 
 int

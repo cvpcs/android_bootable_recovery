@@ -687,6 +687,13 @@ main(int argc, char **argv) {
             return mke2fs_main(argc, argv);
         } else if(strstr(argv[0], "tune2fs") != NULL) {
             return tune2fs_main(argc, argv);
+        } else if(strstr(argv[0], "lzcat") != NULL ||
+                  strstr(argv[0], "lzma") != NULL ||
+                  strstr(argv[0], "unlzma") != NULL ||
+                  strstr(argv[0], "unxz") != NULL ||
+                  strstr(argv[0], "xz") != NULL ||
+                  strstr(argv[0], "xzcat") != NULL) {
+            return xz_main(argc, argv);
         } else {
             return busybox_driver(argc, argv);
         }
