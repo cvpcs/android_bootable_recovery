@@ -50,6 +50,9 @@ int nandroid_backup_path(char* path, char* backup_dir) {
     case NANDROID_TYPE_TAR_BZ2:
         ret = nandroid_backup_path_tar_bz2(path, backup_file);
         break;
+    case NANDROID_TYPE_TAR_LZMA:
+        ret = nandroid_backup_path_tar_lzma(path, backup_file);
+        break;
     case NANDROID_TYPE_YAFFS:
         ret = nandroid_backup_path_yaffs(path, backup_file);
     default:
@@ -117,6 +120,9 @@ int nandroid_restore_path(char* path, char* backup_dir) {
         break;
     case NANDROID_TYPE_TAR_BZ2:
         ret = nandroid_restore_path_tar_bz2(path, backup_file);
+        break;
+    case NANDROID_TYPE_TAR_LZMA:
+        ret = nandroid_restore_path_tar_lzma(path, backup_file);
         break;
     case NANDROID_TYPE_YAFFS:
         ret = nandroid_restore_path_yaffs(path, backup_file);

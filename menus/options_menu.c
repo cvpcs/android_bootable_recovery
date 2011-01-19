@@ -55,7 +55,7 @@ int options_menu_select(int chosen_item, void* data) {
         items[j++] = create_menu_item(NANDROID_TYPE_TAR,      "TAR (SPRecovery)");
         items[j++] = create_menu_item(NANDROID_TYPE_TAR_GZ,   "TAR + GZip Compression");
         items[j++] = create_menu_item(NANDROID_TYPE_TAR_BZ2,  "TAR + BZip2 Compression");
-// not supported yet        items[j++] = create_menu_item(NANDROID_TYPE_TAR_LZMA, "TAR + LZMA Compression");
+        items[j++] = create_menu_item(NANDROID_TYPE_TAR_LZMA, "TAR + LZMA Compression");
         items[j++] = create_menu_item(NANDROID_TYPE_YAFFS,    "YAFFS (ClockworkMod)");
         items[j++] = NULL;
 
